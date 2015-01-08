@@ -437,10 +437,10 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     
     @Override
     public synchronized void start() {
-        loadDataBase();
-        cnxnFactory.start();        
-        startLeaderElection();
-        super.start();
+        loadDataBase();//恢复DB，从zxid中恢复epoch变量，代表投票轮数
+        cnxnFactory.start();//启动针对Client IO
+        startLeaderElection();//选举初始化，从配置获取选举类型，
+        super.start();//启动选举主线程，进入-》run方法
     }
 
     private void loadDataBase() {
@@ -449,7 +449,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
 		try {
             zkDb.loadDataBase();
 
-            // load the epochs
+            // load the epochs 从最新的zxid恢复epoch变量，zxid64位，前32位是epoch值，后32位是zxid
             long lastProcessedZxid = zkDb.getDataTree().lastProcessedZxid;
     		long epochOfZxid = ZxidUtils.getEpochFromZxid(lastProcessedZxid);
             try {
@@ -507,7 +507,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     }
     synchronized public void startLeaderElection() {
     	try {
-    		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
+    		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());//先投自己
     	} catch(IOException e) {
     		RuntimeException re = new RuntimeException(e.getMessage());
     		re.setStackTrace(e.getStackTrace());
@@ -515,14 +515,14 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     	}
         for (QuorumServer p : getView().values()) {
             if (p.id == myid) {
-                myQuorumAddr = p.addr;
+                myQuorumAddr = p.addr;//拿自己的选举地址
                 break;
             }
         }
         if (myQuorumAddr == null) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
-        if (electionType == 0) {
+        if (electionType == 0) {//FLE不经过这里
             try {
                 udpSocket = new DatagramSocket(myQuorumAddr.getPort());
                 responder = new ResponderThread();
@@ -531,7 +531,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 throw new RuntimeException(e);
             }
         }
-        this.electionAlg = createElectionAlgorithm(electionType);
+        this.electionAlg = createElectionAlgorithm(electionType);//根据配置，获取选举算法
     }
     
     /**
@@ -626,10 +626,10 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
-            qcm = new QuorumCnxManager(this);
+            qcm = new QuorumCnxManager(this);//leader 选举io负责类
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
-                listener.start();
+                listener.start();//启动选举Io线程，等待集群其他机器连接
                 le = new FastLeaderElection(this, qcm);
             } else {
                 LOG.error("Null listener when initializing cnx manager");
@@ -711,7 +711,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             while (running) {
                 switch (getPeerState()) {
                 case LOOKING:
-                    LOG.info("LOOKING");
+                    LOG.info("LOOKING");//进行选举
 
                     if (Boolean.getBoolean("readonlymode.enabled")) {
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
@@ -759,7 +759,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                     } else {
                         try {
                             setBCVote(null);
-                            setCurrentVote(makeLEStrategy().lookForLeader());
+                            setCurrentVote(makeLEStrategy().lookForLeader());//选举算法开始选举，主线程可能在这里耗比较长时间
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
                             setPeerState(ServerState.LOOKING);
@@ -796,7 +796,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                     LOG.info("LEADING");
                     try {
                         setLeader(makeLeader(logFactory));
-                        leader.lead();
+                        leader.lead();//###xiaoniudu 当leader没有发生变化时，不会放回
                         setLeader(null);
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e);

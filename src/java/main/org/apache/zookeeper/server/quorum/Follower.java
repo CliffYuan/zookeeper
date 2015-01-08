@@ -83,7 +83,7 @@ public class Follower extends Learner{
                 QuorumPacket qp = new QuorumPacket();
                 while (self.isRunning()) {
                     readPacket(qp);
-                    processPacket(qp);
+                    processPacket(qp);//###xiaoniud appept leader ping and others
                 }
             } catch (Exception e) {
                 LOG.warn("Exception when following the leader", e);

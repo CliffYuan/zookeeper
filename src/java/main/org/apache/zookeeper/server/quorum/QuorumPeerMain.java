@@ -126,31 +126,32 @@ public class QuorumPeerMain {
   
       LOG.info("Starting quorum peer");
       try {
+          //###xiaoniudu 对client提供读写，一般是2181端口，还未启动
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
                                 config.getMaxClientCnxns());
-  
+          //###zk逻辑主线程，负责选举，投票等
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
                       new File(config.getDataLogDir()),
                       new File(config.getDataDir())));
-          quorumPeer.setQuorumPeers(config.getServers());
+          quorumPeer.setQuorumPeers(config.getServers());//集群机器地址
           quorumPeer.setElectionType(config.getElectionAlg());
-          quorumPeer.setMyid(config.getServerId());
+          quorumPeer.setMyid(config.getServerId());//本机集群编号
           quorumPeer.setTickTime(config.getTickTime());
           quorumPeer.setMinSessionTimeout(config.getMinSessionTimeout());
           quorumPeer.setMaxSessionTimeout(config.getMaxSessionTimeout());
           quorumPeer.setInitLimit(config.getInitLimit());
           quorumPeer.setSyncLimit(config.getSyncLimit());
-          quorumPeer.setQuorumVerifier(config.getQuorumVerifier());
+          quorumPeer.setQuorumVerifier(config.getQuorumVerifier());//投票方式
           quorumPeer.setCnxnFactory(cnxnFactory);
           quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
           quorumPeer.setLearnerType(config.getPeerType());
           quorumPeer.setSyncEnabled(config.getSyncEnabled());
           quorumPeer.setQuorumListenOnAllIPs(config.getQuorumListenOnAllIPs());
   
-          quorumPeer.start();
+          quorumPeer.start();//启动主线程
           quorumPeer.join();
       } catch (InterruptedException e) {
           // warn, but generally this is ok

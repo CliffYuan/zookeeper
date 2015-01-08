@@ -269,10 +269,10 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             setZxid(zkDb.getDataTreeLastProcessedZxid());
         }
         else {
-            setZxid(zkDb.loadDataBase());
+            setZxid(zkDb.loadDataBase());//执行恢复，并返回最新的事务ID
         }
         
-        // Clean up dead sessions
+        // Clean up dead sessions 清理session
         LinkedList<Long> deadSessions = new LinkedList<Long>();
         for (Long session : zkDb.getSessions()) {
             if (zkDb.getSessionWithTimeOuts().get(session) == null) {
@@ -286,6 +286,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
     }
 
+    //生成最新的snapshot文件
     public void takeSnapshot(){
 
         try {

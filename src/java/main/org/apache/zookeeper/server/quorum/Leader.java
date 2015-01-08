@@ -182,7 +182,7 @@ public class Leader {
 
     Leader(QuorumPeer self,LeaderZooKeeperServer zk) throws IOException {
         this.self = self;
-        try {
+        try {//leader服务端口
             if (self.getQuorumListenOnAllIPs()) {
                 ss = new ServerSocket(self.getQuorumAddress().getPort());
             } else {
@@ -369,7 +369,7 @@ public class Leader {
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from 
-            // new followers.
+            // new followers. ###xiaoniudu LearnerThread Start
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
             
@@ -461,7 +461,7 @@ public class Leader {
 
                 for (LearnerHandler f : getLearners()) {
                     // Synced set is used to check we have a supporting quorum, so only
-                    // PARTICIPANT, not OBSERVER, learners should be used
+                    // PARTICIPANT, not OBSERVER, learners should be used  ###xiaoniud Leader ping
                     if (f.synced() && f.getLearnerType() == LearnerType.PARTICIPANT) {
                         syncedSet.add(f.getSid());
                     }

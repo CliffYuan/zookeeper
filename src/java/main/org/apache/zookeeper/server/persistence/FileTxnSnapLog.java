@@ -128,11 +128,11 @@ public class FileTxnSnapLog {
     public long restore(DataTree dt, Map<Long, Integer> sessions, 
             PlayBackListener listener) throws IOException {
         snapLog.deserialize(dt, sessions);
-        FileTxnLog txnLog = new FileTxnLog(dataDir);
+        FileTxnLog txnLog = new FileTxnLog(dataDir);//从FileSnap中恢复
         TxnIterator itr = txnLog.read(dt.lastProcessedZxid+1);
         long highestZxid = dt.lastProcessedZxid;
         TxnHeader hdr;
-        try {
+        try {//从snapshot中记录的最新的事务开始处理，将log中的事务merge到datatree中
             while (true) {
                 // iterator points to 
                 // the first valid txn when initialized

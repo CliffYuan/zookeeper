@@ -219,7 +219,7 @@ public class ZKDatabase {
                 addCommittedProposal(r);
             }
         };
-        
+        //load数据
         long zxid = snapLog.restore(dataTree,sessionsWithTimeouts,listener);
         initialized = true;
         return zxid;

@@ -118,10 +118,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
     @Override
     public void startup(ZooKeeperServer zks) throws IOException,
             InterruptedException {
-        start();
+        start();//启动IO主线程
         setZooKeeperServer(zks);
-        zks.startdata();
-        zks.startup();
+        zks.startdata();//从log和snapshot恢复database和session，并重新生成一个最新的snapshot文件
+        zks.startup();//启动sessionTracker线程，初始化IO请求的处理链，并启动每个processor线程
     }
 
     @Override
@@ -188,7 +188,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                         SocketChannel sc = ((ServerSocketChannel) k
                                 .channel()).accept();
                         InetAddress ia = sc.socket().getInetAddress();
-                        int cnxncount = getClientCnxnCount(ia);
+                        int cnxncount = getClientCnxnCount(ia);//校验同个client连接数是否超过限制
                         if (maxClientCnxns > 0 && cnxncount >= maxClientCnxns){
                             LOG.warn("Too many connections from " + ia
                                      + " - max is " + maxClientCnxns );
@@ -199,11 +199,11 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                             sc.configureBlocking(false);
                             SelectionKey sk = sc.register(selector,
                                     SelectionKey.OP_READ);
-                            NIOServerCnxn cnxn = createConnection(sc, sk);
+                            NIOServerCnxn cnxn = createConnection(sc, sk);//创建内部连接
                             sk.attach(cnxn);
-                            addCnxn(cnxn);
+                            addCnxn(cnxn);//添加到连接表，方便后续统计
                         }
-                    } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                    } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {//如果是read和write事件，则处理
                         NIOServerCnxn c = (NIOServerCnxn) k.attachment();
                         c.doIO(k);
                     } else {

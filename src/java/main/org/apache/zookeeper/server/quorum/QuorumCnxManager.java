@@ -99,8 +99,8 @@ public class QuorumCnxManager {
     /*
      * Mapping from Peer to Thread number
      */
-    final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
-    final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
+    final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;//发送线程 <sid,worker>
+    final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;//发送队列 <sid,queue<message>>
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
     /*
@@ -187,13 +187,16 @@ public class QuorumCnxManager {
             closeSocket(sock);
             return false;
         }
-        
+
+        //客户端和服务端处理方式相同，通过以下的连接处理，每2台选举机器之间只会建立一个选举连接。
         // If lost the challenge, then drop the new connection
+        //如果对方id比自己大，则关闭连接，这样导致的结果就是大id的server才会去连接小id的server，避免连接浪费
         if (sid > self.getId()) {
             LOG.info("Have smaller server identifier, so dropping the " +
                      "connection: (" + sid + ", " + self.getId() + ")");
             closeSocket(sock);
             // Otherwise proceed with the connection
+            //如果对方id比自己小，则保持连接，并初始化单独的发送和接受线程
         } else {
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, sid, sw);
@@ -226,7 +229,7 @@ public class QuorumCnxManager {
      * connection if it wins. Notice that it checks whether it has a connection
      * to this server already or not. If it does, then it sends the smallest
      * possible long value to lose the challenge.
-     * 
+     *  通过以下的连接处理，每2台选举机器之间只会建立一个选举连接。
      */
     public boolean receiveConnection(Socket sock) {
         Long sid = null;
@@ -262,6 +265,7 @@ public class QuorumCnxManager {
         }
         
         //If wins the challenge, then close the new connection.
+        //如果对方id比我小，则关闭连接，只允许大id的server连接小id的server
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
@@ -281,6 +285,7 @@ public class QuorumCnxManager {
             connectOne(sid);
 
             // Otherwise start worker threads to receive data.
+            //如果对方id比我大，允许连接，并初始化单独的IO线程
         } else {
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, sid, sw);
@@ -312,7 +317,7 @@ public class QuorumCnxManager {
      */
     public void toSend(Long sid, ByteBuffer b) {
         /*
-         * If sending message to myself, then simply enqueue it (loopback).
+         * If sending message to myself, then simply enqueue it (loopback). 如果是自己，不走网络，直接添加到本地接受队列
          */
         if (self.getId() == sid) {
              b.position(0);
@@ -323,6 +328,7 @@ public class QuorumCnxManager {
         } else {
              /*
               * Start a new connection if doesn't have one already.
+              * 否则，先添加到发送队列，然后尝试连接，连接成功则给每台server启动发送和接受线程
               */
              if (!queueSendMap.containsKey(sid)) {
                  ArrayBlockingQueue<ByteBuffer> bq = new ArrayBlockingQueue<ByteBuffer>(
@@ -338,7 +344,7 @@ public class QuorumCnxManager {
                      LOG.error("No queue for server " + sid);
                  }
              }
-             connectOne(sid);
+             connectOne(sid);//连接
                 
         }
     }
@@ -352,7 +358,7 @@ public class QuorumCnxManager {
     synchronized void connectOne(long sid){
         if (senderWorkerMap.get(sid) == null){
             InetSocketAddress electionAddr;
-            if (self.quorumPeers.containsKey(sid)) {
+            if (self.quorumPeers.containsKey(sid)) {//对方的选举地址，3888端口
                 electionAddr = self.quorumPeers.get(sid).electionAddr;
             } else {
                 LOG.warn("Invalid server id: " + sid);
@@ -365,11 +371,11 @@ public class QuorumCnxManager {
                 }
                 Socket sock = new Socket();
                 setSockOpts(sock);
-                sock.connect(self.getView().get(sid).electionAddr, cnxTO);
+                sock.connect(self.getView().get(sid).electionAddr, cnxTO);//连接
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Connected to server " + sid);
                 }
-                initiateConnection(sock, sid);
+                initiateConnection(sock, sid);//启动发送和接收线程
             } catch (UnresolvedAddressException e) {
                 // Sun doesn't include the address that causes this
                 // exception to be thrown, also UAE cannot be wrapped cleanly
@@ -501,7 +507,7 @@ public class QuorumCnxManager {
                     } else {
                         addr = self.quorumPeers.get(self.getId()).electionAddr;
                     }
-                    LOG.info("My election bind port: " + addr.toString());
+                    LOG.info("My election bind port（选举端口）: " + addr.toString());
                     setName(self.quorumPeers.get(self.getId()).electionAddr
                             .toString());
                     ss.bind(addr);
