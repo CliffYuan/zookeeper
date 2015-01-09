@@ -462,7 +462,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 request.request.rewind();
                 int to = request.request.getInt();
                 request.txn = new CreateSessionTxn(to);
-                request.request.rewind();
+                request.request.rewind();//组装具体的Record实现，这里是CreateSessionTxn，方便后续processor处理
                 zks.sessionTracker.addSession(request.sessionId, to);
                 zks.setOwner(request.sessionId, request.getOwner());
                 break;
@@ -620,7 +620,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
             //create/close session don't require request record
             case OpCode.createSession:
             case OpCode.closeSession:
-                pRequest2Txn(request.type, zks.getNextZxid(), request, null, true);
+                pRequest2Txn(request.type, zks.getNextZxid(), request, null, true);//在这里，组装了Request的header和txh实现，方便后续processor处理
                 break;
  
             //All the rest don't need to create a Txn - just verify session

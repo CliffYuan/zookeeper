@@ -438,16 +438,16 @@ public class ZooKeeper {
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
-        watchManager.defaultWatcher = watcher;
+        watchManager.defaultWatcher = watcher;//设置默认watcher
 
         ConnectStringParser connectStringParser = new ConnectStringParser(
-                connectString);
+                connectString);//从配置的serverList，解析成serverAddresses，这里做了shuffle，server顺序被打乱了
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
-        cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
+        cnxn = new ClientCnxn(connectStringParser.getChrootPath(),//创建客户端连接，初始化SendThread和EventThread
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);
-        cnxn.start();
+        cnxn.start();//启动SendThread和EventThread
     }
 
     /**

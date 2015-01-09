@@ -127,7 +127,7 @@ abstract class ClientCnxnSocket {
         ByteBufferInputStream bbis = new ByteBufferInputStream(incomingBuffer);
         BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
         ConnectResponse conRsp = new ConnectResponse();
-        conRsp.deserialize(bbia, "connect");
+        conRsp.deserialize(bbia, "connect");//反序列化成CoonectResponse
 
         // read "is read-only" flag
         boolean isRO = false;
@@ -139,9 +139,9 @@ abstract class ClientCnxnSocket {
             LOG.warn("Connected to an old server; r-o mode will be unavailable");
         }
 
-        this.sessionId = conRsp.getSessionId();
+        this.sessionId = conRsp.getSessionId();//server返回的sessionId
         sendThread.onConnected(conRsp.getTimeOut(), this.sessionId,
-                conRsp.getPasswd(), isRO);
+                conRsp.getPasswd(), isRO);//后续处理，初始化client的一些参数，最后触发WatchedEvent
     }
 
     abstract boolean isConnected();

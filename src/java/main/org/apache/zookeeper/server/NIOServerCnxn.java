@@ -182,7 +182,7 @@ public class NIOServerCnxn extends ServerCnxn {
     /** Read the request payload (everything following the length prefix) */
     private void readPayload() throws IOException, InterruptedException {
         if (incomingBuffer.remaining() != 0) { // have we read length bytes?
-            int rc = sock.read(incomingBuffer); // sock is non-blocking, so ok
+            int rc = sock.read(incomingBuffer); // sock is non-blocking, so ok  尝试一次读进来
             if (rc < 0) {
                 throw new EndOfStreamException(
                         "Unable to read additional data from client sessionid 0x"
@@ -191,15 +191,15 @@ public class NIOServerCnxn extends ServerCnxn {
             }
         }
 
-        if (incomingBuffer.remaining() == 0) { // have we read length bytes?
-            packetReceived();
-            incomingBuffer.flip();
-            if (!initialized) {
+        if (incomingBuffer.remaining() == 0) { // have we read length bytes? //读完整了
+            packetReceived();//server的packet统计
+            incomingBuffer.flip();//准备使用
+            if (!initialized) {//没有初始化，如果CoonectRequst还没来，那第一个packet肯定是他了
                 readConnectRequest();
             } else {
                 readRequest();
             }
-            lenBuffer.clear();
+            lenBuffer.clear();//清理现场，为下一个packet读做准备
             incomingBuffer = lenBuffer;
         }
     }
@@ -223,25 +223,25 @@ public class NIOServerCnxn extends ServerCnxn {
                 return;
             }
             if (k.isReadable()) {
-                int rc = sock.read(incomingBuffer);
-                if (rc < 0) {
+                int rc = sock.read(incomingBuffer);//先从Channel读4个字节，代表头
+                if (rc < 0) {//数据还没有传输完成
                     throw new EndOfStreamException(
                             "Unable to read additional data from client sessionid 0x"
                             + Long.toHexString(sessionId)
                             + ", likely client has closed socket");
                 }
-                if (incomingBuffer.remaining() == 0) {
+                if (incomingBuffer.remaining() == 0) {//能够读满4个字节
                     boolean isPayload;
-                    if (incomingBuffer == lenBuffer) { // start of next request
+                    if (incomingBuffer == lenBuffer) { // start of next request 第一次读，并且知道总长度
                         incomingBuffer.flip();
-                        isPayload = readLength(k);
+                        isPayload = readLength(k);//给incomingBuffer分配一个length长度的内存，将后续的数据都给读进来
                         incomingBuffer.clear();
                     } else {
-                        // continuation
+                        // continuation 上一次没有读完（数据包不完整），继续读
                         isPayload = true;
                     }
                     if (isPayload) { // not the case for 4letterword
-                        readPayload();
+                        readPayload();//好，读后续数据
                     }
                     else {
                         // four letter words take care
@@ -415,8 +415,8 @@ public class NIOServerCnxn extends ServerCnxn {
         if (zkServer == null) {
             throw new IOException("ZooKeeperServer not running");
         }
-        zkServer.processConnectRequest(this, incomingBuffer);
-        initialized = true;
+        zkServer.processConnectRequest(this, incomingBuffer);//开始执行ConnectRequest的处理链
+        initialized = true;//处理完了，说明业务连接已经建立好了
     }
 
     /**

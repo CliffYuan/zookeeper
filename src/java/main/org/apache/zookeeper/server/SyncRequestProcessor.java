@@ -123,9 +123,12 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
             setRandRoll(r.nextInt(snapCount/2));
             while (true) {
                 Request si = null;
-                if (toFlush.isEmpty()) {
+                if (toFlush.isEmpty()) {//flush队列如果为空，阻塞等待，代表之前的请求都被处理了
                     si = queuedRequests.take();
                 } else {
+                    //如果不为空，就是说还有请求等待处理，先非阻塞拿一下，如果系统压力小，正好没有请求进来，则处理之前积压的请求
+                    //如果系统压力大，则可能需要flush满1000个才会继续处理
+
                     si = queuedRequests.poll();
                     if (si == null) {
                         flush(toFlush);
@@ -137,12 +140,12 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                 }
                 if (si != null) {
                     // track the number of records written to the log
-                    if (zks.getZKDatabase().append(si)) {
-                        logCount++;
+                    if (zks.getZKDatabase().append(si)) {//将Request append到log输出流，先序列化再append，注意此时request还没flush到磁盘，还在内存呢
+                        logCount++;//成功计数
                         if (logCount > (snapCount / 2 + randRoll)) {
                             randRoll = r.nextInt(snapCount/2);
                             // roll the log
-                            zks.getZKDatabase().rollLog();
+                            zks.getZKDatabase().rollLog();//将内存中的log flush到磁盘
                             // take a snapshot
                             if (snapInProcess != null && snapInProcess.isAlive()) {
                                 LOG.warn("Too busy to snap, skipping");
@@ -156,9 +159,9 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                                             }
                                         }
                                     };
-                                snapInProcess.start();
+                                snapInProcess.start();//启动线程异步将内存中的database和sessions状态写入snapshot文件中
                             }
-                            logCount = 0;
+                            logCount = 0;//刷盘后清空
                         }
                     } else if (toFlush.isEmpty()) {
                         // optimization for read heavy workloads
@@ -173,9 +176,9 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                         }
                         continue;
                     }
-                    toFlush.add(si);
+                    toFlush.add(si);//写请求前面append到log输出流后，在这里加入到flush队列，后续批量处理
                     if (toFlush.size() > 1000) {
-                        flush(toFlush);
+                        flush(toFlush);//如果系统压力大，可能需要到1000个request才会flush，flush之后可以被后续processor处理
                     }
                 }
             }
@@ -193,9 +196,9 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
         if (toFlush.isEmpty())
             return;
 
-        zks.getZKDatabase().commit();
+        zks.getZKDatabase().commit();//将之前的append log flush到磁盘，并顺便关闭旧的log文件句柄
         while (!toFlush.isEmpty()) {
-            Request i = toFlush.remove();
+            Request i = toFlush.remove();//log flush完后，开始处理flush队列里的Request
             if (nextProcessor != null) {
                 nextProcessor.processRequest(i);
             }

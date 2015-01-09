@@ -57,6 +57,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @return true if a packet was received
      * @throws InterruptedException
      * @throws IOException
+     *
+     * 这里我们的第一个Packet是ConnReq，它构造的packet没有header，所以发完就直接丢掉了，
+     * 但是SendThread还需要监听server端的返回，以确认连上，并进行session的初始化。
+     * 那到这里client端等待server端返回了，
      */
     void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, ClientCnxn cnxn)
       throws InterruptedException, IOException {
@@ -64,7 +68,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
-        if (sockKey.isReadable()) {
+        if (sockKey.isReadable()) {//读
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
                 throw new EndOfStreamException(
@@ -72,61 +76,62 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 + Long.toHexString(sessionId)
                                 + ", likely server has closed socket");
             }
-            if (!incomingBuffer.hasRemaining()) {
-                incomingBuffer.flip();
+            if (!incomingBuffer.hasRemaining()) {//
+                incomingBuffer.flip();//如果读满，注意这里同一个包，要读2次，第一次读长度，第二次读内容，incomingBuffer重用
                 if (incomingBuffer == lenBuffer) {
                     recvCount++;
-                    readLength();
-                } else if (!initialized) {
-                    readConnectResult();
-                    enableRead();
+                    readLength();//转化为包长度
+                } else if (!initialized) {//开始经建立了连接
+                    readConnectResult();//读取ConnectRequest，其实就是将incomingBuffer的内容反序列化成ConnectResponse对象,将事件投递给enventThread
+                    enableRead();//继续读后续响应
                     if (findSendablePacket(outgoingQueue,
                             cnxn.sendThread.clientTunneledAuthenticationInProgress()) != null) {
                         // Since SASL authentication has completed (if client is configured to do so),
                         // outgoing packets waiting in the outgoingQueue can now be sent.
-                        enableWrite();
+                        enableWrite();//如果还有写请求，确保write事件ok
                     }
-                    lenBuffer.clear();
+                    lenBuffer.clear();//准备读下一个响应
                     incomingBuffer = lenBuffer;
                     updateLastHeard();
-                    initialized = true;
+                    initialized = true;//session建立完毕
                 } else {
-                    sendThread.readResponse(incomingBuffer);
+                    sendThread.readResponse(incomingBuffer);//已经建立session
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
                     updateLastHeard();
                 }
             }
         }
-        if (sockKey.isWritable()) {
+        if (sockKey.isWritable()) {//写
             synchronized(outgoingQueue) {
                 Packet p = findSendablePacket(outgoingQueue,
-                        cnxn.sendThread.clientTunneledAuthenticationInProgress());
+                        cnxn.sendThread.clientTunneledAuthenticationInProgress());//从发送队列中拿请求
 
                 if (p != null) {
-                    updateLastSend();
+                    updateLastSend();//更新发送时间
                     // If we already started writing p, p.bb will already exist
                     if (p.bb == null) {
                         if ((p.requestHeader != null) &&
                                 (p.requestHeader.getType() != OpCode.ping) &&
                                 (p.requestHeader.getType() != OpCode.auth)) {
-                            p.requestHeader.setXid(cnxn.getXid());
+                            p.requestHeader.setXid(cnxn.getXid());//如果是业务请求，则需要设置事务Id
                         }
-                        p.createBB();
+                        p.createBB();//序列化
                     }
-                    sock.write(p.bb);
-                    if (!p.bb.hasRemaining()) {
-                        sentCount++;
-                        outgoingQueue.removeFirstOccurrence(p);
+                    sock.write(p.bb);//写数据
+                    if (!p.bb.hasRemaining()) {//发送成功
+                        sentCount++;//已发送的业务Packet数量
+                        outgoingQueue.removeFirstOccurrence(p);//发送完了，那从发送队列删掉，方便后续发送请求处理
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
                             synchronized (pendingQueue) {
-                                pendingQueue.add(p);
+                                pendingQueue.add(p);//如果是业务请求，则添加到Pending队列，方便对server端返回做相应处理，如果是其他请求，发完就扔了。。。
                             }
                         }
                     }
                 }
+                //请求发完了，不需要再监听OS的写事件了，如果没发完，那还是要继续监听的，继续写嘛
                 if (outgoingQueue.isEmpty()) {
                     // No more packets to send: turn off write interest flag.
                     // Will be turned on later by a later call to enableWrite(),
@@ -274,17 +279,17 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) 
     throws IOException {
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
-        boolean immediateConnect = sock.connect(addr);
+        boolean immediateConnect = sock.connect(addr);//连接
         if (immediateConnect) {
-            sendThread.primeConnection();
+            sendThread.primeConnection();//发送ConnectRequest请求，请求和server建立session
         }
     }
     
     @Override
     void connect(InetSocketAddress addr) throws IOException {
-        SocketChannel sock = createSock();
+        SocketChannel sock = createSock();//创建socket
         try {
-           registerAndConnect(sock, addr);
+           registerAndConnect(sock, addr);//注册OP_CONNECT事件，尝试连接
         } catch (IOException e) {
             LOG.error("Unable to open socket to " + addr);
             sock.close();
@@ -295,7 +300,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         /*
          * Reset incomingBuffer
          */
-        lenBuffer.clear();
+        lenBuffer.clear();//重置2个读buffer，准备下一次读
         incomingBuffer = lenBuffer;
     }
 
@@ -346,7 +351,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
                      ClientCnxn cnxn)
             throws IOException, InterruptedException {
-        selector.select(waitTimeOut);
+        selector.select(waitTimeOut);//超时时间
         Set<SelectionKey> selected;
         synchronized (this) {
             selected = selector.selectedKeys();
@@ -357,13 +362,13 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         updateNow();
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
-            if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
+            if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {//如果之前连接没有立马连上，则在这里处理OP_CONNECT事件
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                doIO(pendingQueue, outgoingQueue, cnxn);
+                doIO(pendingQueue, outgoingQueue, cnxn);//处理读写事件
             }
         }
         if (sendThread.getZkState().isConnected()) {

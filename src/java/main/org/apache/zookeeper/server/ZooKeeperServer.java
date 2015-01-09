@@ -539,13 +539,13 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
 
     long createSession(ServerCnxn cnxn, byte passwd[], int timeout) {
-        long sessionId = sessionTracker.createSession(timeout);
-        Random r = new Random(sessionId ^ superSecret);
+        long sessionId = sessionTracker.createSession(timeout);//server端创建session，sessionId自增
+        Random r = new Random(sessionId ^ superSecret);//随机密码 todo 感觉没有使用呢
         r.nextBytes(passwd);
         ByteBuffer to = ByteBuffer.allocate(4);
         to.putInt(timeout);
-        cnxn.setSessionId(sessionId);
-        submitRequest(cnxn, sessionId, OpCode.createSession, 0, to, null);
+        cnxn.setSessionId(sessionId);//每个server端连接都有一个唯一的SessionId
+        submitRequest(cnxn, sessionId, OpCode.createSession, 0, to, null);//提交请求给后面的执行链
         return sessionId;
     }
 
@@ -806,7 +806,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     public void processConnectRequest(ServerCnxn cnxn, ByteBuffer incomingBuffer) throws IOException {
         BinaryInputArchive bia = BinaryInputArchive.getArchive(new ByteBufferInputStream(incomingBuffer));
         ConnectRequest connReq = new ConnectRequest();
-        connReq.deserialize(bia, "connect");
+        connReq.deserialize(bia, "connect");//ConnectReq的packet是没有header的，所以直接读内容，反序列化
         if (LOG.isDebugEnabled()) {
             LOG.debug("Session establishment request from client "
                     + cnxn.getRemoteSocketAddress()
@@ -842,7 +842,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             LOG.info(msg);
             throw new CloseRequestException(msg);
         }
-        int sessionTimeout = connReq.getTimeOut();
+        int sessionTimeout = connReq.getTimeOut();//设置客户端请求的session相关参数
         byte passwd[] = connReq.getPasswd();
         int minSessionTimeout = getMinSessionTimeout();
         if (sessionTimeout < minSessionTimeout) {
@@ -855,20 +855,20 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         cnxn.setSessionTimeout(sessionTimeout);
         // We don't want to receive any packets until we are sure that the
         // session is setup
-        cnxn.disableRecv();
-        long sessionId = connReq.getSessionId();
+        cnxn.disableRecv();//暂时先不读后续请求了，直到session建立
+        long sessionId = connReq.getSessionId();//拿客户端的sessionId
         if (sessionId != 0) {
             long clientSessionId = connReq.getSessionId();
             LOG.info("Client attempting to renew session 0x"
                     + Long.toHexString(clientSessionId)
                     + " at " + cnxn.getRemoteSocketAddress());
-            serverCnxnFactory.closeSession(sessionId);
+            serverCnxnFactory.closeSession(sessionId);//todo 没有看懂
             cnxn.setSessionId(sessionId);
             reopenSession(cnxn, sessionId, passwd, sessionTimeout);
         } else {
             LOG.info("Client attempting to establish new session at "
                     + cnxn.getRemoteSocketAddress());
-            createSession(cnxn, passwd, sessionTimeout);
+            createSession(cnxn, passwd, sessionTimeout);//创建新Session
         }
     }
 
