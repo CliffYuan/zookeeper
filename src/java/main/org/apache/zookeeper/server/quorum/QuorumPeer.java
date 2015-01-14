@@ -113,9 +113,9 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             this.type = type;
         }
         
-        public InetSocketAddress addr;
+        public InetSocketAddress addr;//leader地址，被选举为leader后，follower通过该地址连接leader
 
-        public InetSocketAddress electionAddr;
+        public InetSocketAddress electionAddr;//选举地址
         
         public long id;
         
@@ -439,7 +439,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     public synchronized void start() {
         loadDataBase();//恢复DB，从zxid中恢复epoch变量，代表投票轮数
         cnxnFactory.start();//启动针对Client IO
-        startLeaderElection();//选举初始化，从配置获取选举类型，
+        startLeaderElection();//选举初始化，从配置获取选举类型，绑定选举端口，启动线程
         super.start();//启动选举主线程，进入-》run方法
     }
 

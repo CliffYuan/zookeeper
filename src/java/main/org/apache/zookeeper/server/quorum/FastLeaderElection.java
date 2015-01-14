@@ -499,9 +499,9 @@ public class FastLeaderElection implements Election {
     QuorumPeer self;
     Messenger messenger;
     volatile long logicalclock; /* Election instance */
-    long proposedLeader;    //投票后
-    long proposedZxid;
-    long proposedEpoch;
+    long proposedLeader;    //投票后,serverid
+    long proposedZxid;      //
+    long proposedEpoch;     //
 
 
     /**
@@ -589,7 +589,7 @@ public class FastLeaderElection implements Election {
             if(LOG.isDebugEnabled()){
                 LOG.debug("Sending Notification: " + proposedLeader + " (n.leader), 0x"  +
                       Long.toHexString(proposedZxid) + " (n.zxid), 0x" + Long.toHexString(logicalclock)  +
-                      " (n.round), " + sid + " (recipient), " + self.getId() +
+                      " (n.round-第几轮), " + sid + " (recipient-接受者), " + self.getId() +
                       " (myid), 0x" + Long.toHexString(proposedEpoch) + " (n.peerEpoch)");
             }
             sendqueue.offer(notmsg);//添加到业务的发送队列，该队列会被WorkerSender消费
@@ -612,6 +612,7 @@ public class FastLeaderElection implements Election {
     protected boolean totalOrderPredicate(long newId, long newZxid, long newEpoch, long curId, long curZxid, long curEpoch) {
         LOG.debug("id: " + newId + ", proposed id: " + curId + ", zxid: 0x" +
                 Long.toHexString(newZxid) + ", proposed zxid: 0x" + Long.toHexString(curZxid));
+        LOG.debug("比较投票结果：id: " + newId +",newZxid:"+newZxid+",newEpoch:"+newEpoch+",curId:"+curId+",curZxid:"+curZxid+",curEpoch:"+curEpoch);
         if(self.getQuorumVerifier().getWeight(newId) == 0){
             return false;
         }
@@ -723,7 +724,7 @@ public class FastLeaderElection implements Election {
         if(LOG.isDebugEnabled()){
             LOG.debug("Updating proposal: " + leader + " (newleader), 0x"
                     + Long.toHexString(zxid) + " (newzxid), " + proposedLeader
-                    + " (oldleader), 0x" + Long.toHexString(proposedZxid) + " (oldzxid)");
+                    + " (oldleader), 0x" + Long.toHexString(proposedZxid) + " (oldzxid),"+epoch+"(epoch),"+proposedEpoch+"(oldepoch)");
         }
         proposedLeader = leader;
         proposedZxid = zxid;

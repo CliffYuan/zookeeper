@@ -54,6 +54,12 @@ public class Follower extends Learner{
     }
 
     /**
+     * 1.查找leader ip
+     * 2.连接leader
+     * 3.传递learner的zxid给leader
+     * 4.leader传递zxid给learner
+     * 5.与leader同步数据
+     * 6.进入正常的leader与learner交互流程
      * the main method called by the follower to follow the leader
      *
      * @throws InterruptedException
@@ -66,9 +72,9 @@ public class Follower extends Learner{
         self.end_fle = 0;
         fzk.registerJMX(new FollowerBean(this, zk), self.jmxLocalPeerBean);
         try {
-            InetSocketAddress addr = findLeader();            
+            InetSocketAddress addr = findLeader(); //查找leader ip
             try {
-                connectToLeader(addr);
+                connectToLeader(addr);//连接leader
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
 
                 //check to see if the leader zxid is lower than ours
@@ -102,11 +108,35 @@ public class Follower extends Learner{
     }
 
     /**
+     *
+     *
+     *
+     * Follower的消息循环处理如下几种来自Leader的消息
+
+     1.  PING 心跳消息，返回PING消息给Leader
+
+     2. PROPOSAL消息：放入pendingTxns队列，然后转发给SyncRequestProcessor线程
+
+     3. COMMIT消息：取出pendingTxns队列中的第一个消息，与这个commit消息比较，如果两者zxid相同，提交给commitProcessor线程处理；
+     如果zxid不同，说明之间有消息丢失，本节点的数据已经不一致了。直接退出server！等下次重启时，再通过和Leader的交互完成数据的同步。
+
+     4. UPTODATE消息：Follower开始接入时，在Leader发送完对Follower的同步指令之后，发送这个消息，表示follower可以提供服务了。
+     follower处理该消息时，表名同步已经完成，将当前日志写入snap文件持久化。
+
+     5. REVALIDATE消息：根据Leader的REVALIDATE结果，关闭待revalidate的session还是允许其接受消息
+
+     6. SYNC消息：返回SYNC结果到客户端。这个消息最初由客户端发起，用来强制得到最新的更新。对应于Paxos协议中的慢速读。
+     *
+     *
+     *
      * Examine the packet received in qp and dispatch based on its contents.
      * @param qp
      * @throws IOException
      */
     protected void processPacket(QuorumPacket qp) throws IOException{
+        if(qp.getType()!=Leader.PING) {
+            LOG.info("接收到leader的数据包(过滤了PING)，type：{},zxid:{}", qp.getType(),qp.getZxid());
+        }
         switch (qp.getType()) {
         case Leader.PING:            
             ping(qp);            
@@ -121,10 +151,10 @@ public class Follower extends Learner{
                         + Long.toHexString(lastQueued + 1));
             }
             lastQueued = hdr.getZxid();
-            fzk.logRequest(hdr, txn);
+            fzk.logRequest(hdr, txn);//处理与leader投票请求,对应syncRequestProcessor
             break;
         case Leader.COMMIT:
-            fzk.commit(qp.getZxid());
+            fzk.commit(qp.getZxid());//对应commitProcessor
             break;
         case Leader.UPTODATE:
             LOG.error("Received an UPTODATE message after Follower started");
@@ -133,7 +163,7 @@ public class Follower extends Learner{
             revalidate(qp);
             break;
         case Leader.SYNC:
-            fzk.sync();
+            fzk.sync();//对应commitProcessor
             break;
         }
     }

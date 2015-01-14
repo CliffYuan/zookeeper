@@ -113,11 +113,11 @@ public class FinalRequestProcessor implements RequestProcessor {
                TxnHeader hdr = request.hdr;
                Record txn = request.txn;
 
-               rc = zks.processTxn(hdr, txn);
+               rc = zks.processTxn(hdr, txn);//更新内存结构数据,触发watch
             }
             // do not add non quorum packets to the queue.
             if (Request.isQuorum(request.type)) {
-                zks.getZKDatabase().addCommittedProposal(request);
+                zks.getZKDatabase().addCommittedProposal(request);//记录log
             }
         }
 
@@ -294,7 +294,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 rsp = new GetDataResponse(b, stat);
                 break;
             }
-            case OpCode.setWatches: {
+            case OpCode.setWatches: {//触发watcher
                 lastOp = "SETW";
                 SetWatches setWatches = new SetWatches();
                 // XXX We really should NOT need this!!!!

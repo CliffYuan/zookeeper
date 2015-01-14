@@ -93,6 +93,7 @@ public class WatchManager {
     }
 
     public Set<Watcher> triggerWatch(String path, EventType type, Set<Watcher> supress) {
+        LOG.info("触发Watch");
         WatchedEvent e = new WatchedEvent(type,
                 KeeperState.SyncConnected, path);
         HashSet<Watcher> watchers;

@@ -197,6 +197,8 @@ public class Request {
             .append(" cxid:0x").append(Long.toHexString(cxid))
             .append(" zxid:0x").append(Long.toHexString(hdr == null ?
                     -2 : hdr.getZxid()))
+            .append(" zxid:").append(hdr == null ?
+                -2 : hdr.getZxid())
             .append(" txntype:").append(hdr == null ?
                     "unknown" : "" + hdr.getType());
 

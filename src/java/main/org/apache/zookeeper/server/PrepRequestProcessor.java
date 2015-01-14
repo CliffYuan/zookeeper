@@ -320,6 +320,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
     protected void pRequest2Txn(int type, long zxid, Request request, Record record, boolean deserialize)
         throws KeeperException, IOException, RequestProcessorException
     {
+        //构造内部的事务头
         request.hdr = new TxnHeader(request.sessionId, request.cxid, zxid,
                                     zks.getTime(), type);
 
@@ -372,10 +373,10 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 int newCversion = parentRecord.stat.getCversion()+1;
                 request.txn = new CreateTxn(path, createRequest.getData(),
                         listACL,
-                        createMode.isEphemeral(), newCversion);
+                        createMode.isEphemeral(), newCversion);//构造事务体，后续会被写入log
                 StatPersisted s = new StatPersisted();
                 if (createMode.isEphemeral()) {
-                    s.setEphemeralOwner(request.sessionId);
+                    s.setEphemeralOwner(request.sessionId);//如果是临时节点，则owner为sessionId
                 }
                 parentRecord = parentRecord.duplicate(request.hdr.getZxid());
                 parentRecord.childCount++;
@@ -521,8 +522,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
      */
     @SuppressWarnings("unchecked")
     protected void pRequest(Request request) throws RequestProcessorException {
-        // LOG.info("Prep>>> cxid = " + request.cxid + " type = " +
-        // request.type + " id = 0x" + Long.toHexString(request.sessionId));
+         LOG.info("Prep>>> cxid = " + request.cxid + " type = " +
+         request.type + " id = 0x" + Long.toHexString(request.sessionId)+",带事务的操作将递增zxid,zxid="+zks.getZxid());
         request.hdr = null;
         request.txn = null;
         
@@ -530,7 +531,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
             switch (request.type) {
                 case OpCode.create:
                 CreateRequest createRequest = new CreateRequest();
-                pRequest2Txn(request.type, zks.getNextZxid(), request, createRequest, true);
+                pRequest2Txn(request.type, zks.getNextZxid(), request, createRequest, true);//zkid递增
                 break;
             case OpCode.delete:
                 DeleteRequest deleteRequest = new DeleteRequest();               

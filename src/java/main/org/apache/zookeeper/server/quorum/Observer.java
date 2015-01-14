@@ -114,7 +114,7 @@ public class Observer extends Learner{
             revalidate(qp);
             break;
         case Leader.SYNC:
-            ((ObserverZooKeeperServer)zk).sync();
+            ((ObserverZooKeeperServer)zk).sync();//进行学习，即数据同步
             break;
         case Leader.INFORM:            
             TxnHeader hdr = new TxnHeader();

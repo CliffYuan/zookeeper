@@ -31,6 +31,10 @@ import org.apache.zookeeper.server.ZooTrace;
 /**
  * This RequestProcessor forwards any requests that modify the state of the
  * system to the Leader.
+ *
+ * 步骤：
+ * 1.将消息投递给CommitProcessor（这个等待投票结果）
+ * 2.将消息转发给leader（用于发起投票）。
  */
 public class FollowerRequestProcessor extends Thread implements
         RequestProcessor {
@@ -73,7 +77,7 @@ public class FollowerRequestProcessor extends Thread implements
                 // path, but different from others, we need to keep track
                 // of the sync operations this follower has pending, so we
                 // add it to pendingSyncs.
-                switch (request.type) {
+                switch (request.type) {//需要转发给leader的
                 case OpCode.sync:
                     zks.pendingSyncs.add(request);
                     zks.getFollower().request(request);
@@ -87,7 +91,7 @@ public class FollowerRequestProcessor extends Thread implements
                 case OpCode.multi:
                     zks.getFollower().request(request);
                     break;
-                }
+                }//其他类型不处理
             }
         } catch (Exception e) {
             LOG.error("Unexpected exception causing exit", e);
@@ -96,6 +100,9 @@ public class FollowerRequestProcessor extends Thread implements
     }
 
     public void processRequest(Request request) {
+        if(request.type!=OpCode.ping) {
+            LOG.info("接收客户端请求,也包括客户端的PING请求（过滤了），request:" + request);
+        }
         if (!finished) {
             queuedRequests.add(request);
         }

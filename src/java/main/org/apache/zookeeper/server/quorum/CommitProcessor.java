@@ -43,11 +43,12 @@ public class CommitProcessor extends Thread implements RequestProcessor {
 
     /**
      * Requests that have been committed.
+     * committedRequests保存Proposal通过后，LearnerHanlder线程（后文会有说明）发来的提交请求。
      */
     LinkedList<Request> committedRequests = new LinkedList<Request>();
 
     RequestProcessor nextProcessor;
-    ArrayList<Request> toProcess = new ArrayList<Request>();
+    ArrayList<Request> toProcess = new ArrayList<Request>();//投票完成后，待处理的，即投递到下一个processor.
 
     /**
      * This flag indicates whether we need to wait for a response to come back from the
@@ -81,7 +82,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                         continue;
                     }
                     // First check and see if the commit came in for the pending
-                    // request
+                    // request 同步或者写操作，有投票结果
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() > 0) {
                         Request r = committedRequests.remove();
@@ -100,7 +101,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                             nextPending.txn = r.txn;
                             nextPending.zxid = r.zxid;
                             toProcess.add(nextPending);
-                            nextPending = null;
+                            nextPending = null;//有投票结果
                         } else {
                             // this request came from someone else so just
                             // send the commit packet
@@ -127,17 +128,17 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                         case OpCode.setACL:
                         case OpCode.createSession:
                         case OpCode.closeSession:
-                            nextPending = request;
+                            nextPending = request;//同步或者写
                             break;
                         case OpCode.sync:
                             if (matchSyncs) {
-                                nextPending = request;
+                                nextPending = request;//同步或者写
                             } else {
-                                toProcess.add(request);
+                                toProcess.add(request);//读数据
                             }
                             break;
                         default:
-                            toProcess.add(request);
+                            toProcess.add(request);//读数据
                         }
                     }
                 }

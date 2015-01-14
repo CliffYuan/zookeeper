@@ -536,6 +536,7 @@ public class Leader {
      * @param followerAddr
      */
     synchronized public void processAck(long sid, long zxid, SocketAddress followerAddr) {
+        LOG.info("leader收到投票结果，sid:{},zxid:{},followerAddr:"+followerAddr,sid,Long.toHexString(zxid));
         if (LOG.isTraceEnabled()) {
             LOG.trace("Ack zxid: 0x{}", Long.toHexString(zxid));
             for (Proposal p : outstandingProposals.values()) {
@@ -589,15 +590,16 @@ public class Leader {
             }
             outstandingProposals.remove(zxid);
             if (p.request != null) {
-                toBeApplied.add(p);
+                toBeApplied.add(p);//添加到待提交队列
             }
 
             if (p.request == null) {
                 LOG.warn("Going to commmit null request for proposal: {}", p);
             }
-            commit(zxid);
-            inform(p);
-            zk.commitProcessor.commit(p.request);
+            LOG.info("leader收到投票结果,开通通知follower,observer和leader自己commit，sid:{},zxid:{},followerAddr:"+followerAddr,sid,zxid);
+            commit(zxid);//通知foller提交事务
+            inform(p);//通知oberver
+            zk.commitProcessor.commit(p.request);//leader提交事务
             if(pendingSyncs.containsKey(zxid)){
                 for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
                     sendSync(r);
@@ -691,6 +693,7 @@ public class Leader {
      * @param zxid
      */
     public void commit(long zxid) {
+        LOG.info("leader将投票结果COMMIT通知给所有follower,zxid:{}",zxid);
         synchronized(this){
             lastCommitted = zxid;
         }
@@ -700,10 +703,10 @@ public class Leader {
     
     /**
      * Create an inform packet and send it to all observers.
-     * @param zxid
      * @param proposal
      */
-    public void inform(Proposal proposal) {   
+    public void inform(Proposal proposal) {
+        LOG.info("leader将投票结果通知给所有observer,proposal:{}",proposal);
         QuorumPacket qp = new QuorumPacket(Leader.INFORM, proposal.request.zxid, 
                                             proposal.packet.getData(), null);
         sendObserverPacket(qp);
@@ -735,6 +738,7 @@ public class Leader {
      * @return the proposal that is queued to send to all the members
      */
     public Proposal propose(Request request) throws XidRolloverException {
+        LOG.info("leader发起投票,request:{}",request);
         /**
          * Address the rollover issue. All lower 32bits set indicate a new leader
          * election. Force a re-election instead. See ZOOKEEPER-1277
@@ -797,7 +801,6 @@ public class Leader {
     /**
      * Sends a sync message to the appropriate server
      * 
-     * @param f
      * @param r
      */
             

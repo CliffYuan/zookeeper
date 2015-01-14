@@ -117,6 +117,15 @@ public class QuorumPeerMain {
         }
     }
 
+    /**
+     *
+     * 1.恢复DB，从zxid中恢复epoch变量，代表投票轮数
+     * 2.启动针对Client IO线程NIOServerCnxnFactory
+     * 3.选举初始化，从配置获取选举类型，绑定选举端口，启动QuorumCnxManager.Listener线程,接收投票消息
+     * 4.启动QuorumPeer线程，选举主线程，进入-》run方法
+     * @param config
+     * @throws IOException
+     */
     public void runFromConfig(QuorumPeerConfig config) throws IOException {
       try {
           ManagedUtil.registerLog4jMBeans();

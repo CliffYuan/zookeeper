@@ -93,6 +93,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
         if ((request.zxid & 0xffffffffL) != 0) {
             pendingTxns.add(request);
         }
+        LOG.info("接收到leader的投票数据包,丢给SyncRequestProcessor处理,request:{}",request);
         syncProcessor.processRequest(request);
     }
 
@@ -116,6 +117,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
             System.exit(12);
         }
         Request request = pendingTxns.remove();
+        LOG.info("接收到leader的Commit,丢给CommitProcessor处理,request:{}",request);
         commitProcessor.commit(request);
     }
     

@@ -239,6 +239,7 @@ public class FileTxnSnapLog {
         File snapshotFile = new File(snapDir, Util.makeSnapshotName(lastZxid));
         LOG.info("Snapshotting: 0x{} to {}", Long.toHexString(lastZxid),
                 snapshotFile);
+        System.out.println("Snapshotting lastZxid:"+lastZxid);
         snapLog.serialize(dataTree, sessionsWithTimeouts, snapshotFile);
         
     }

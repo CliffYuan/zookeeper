@@ -44,6 +44,11 @@ public class LogFormatter {
      * @param args
      */
     public static void main(String[] args) throws Exception {
+        args=new String[1];
+       // args[0]="/home/xiaoniudu/share-doc2win7/log.502f37979";
+
+        args[0]="/tmp/zookeeper1/version-2/log.900000001";
+
         if (args.length != 1) {
             System.err.println("USAGE: LogFormatter log_file");
             System.exit(2);

@@ -114,7 +114,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         if ((p.requestHeader != null) &&
                                 (p.requestHeader.getType() != OpCode.ping) &&
                                 (p.requestHeader.getType() != OpCode.auth)) {
-                            p.requestHeader.setXid(cnxn.getXid());//如果是业务请求，则需要设置事务Id
+                            p.requestHeader.setXid(cnxn.getXid());//如果是业务请求，则需要设置事务Id,++了
                         }
                         p.createBB();//序列化
                     }

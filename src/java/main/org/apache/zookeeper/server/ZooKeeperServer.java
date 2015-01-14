@@ -989,6 +989,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
     
     public ProcessTxnResult processTxn(TxnHeader hdr, Record txn) {
+        LOG.info("处理ZK内存数据");
         ProcessTxnResult rc;
         int opCode = hdr.getType();
         long sessionId = hdr.getClientId();

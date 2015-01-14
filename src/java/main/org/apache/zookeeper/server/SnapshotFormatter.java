@@ -36,6 +36,7 @@ import org.apache.zookeeper.server.persistence.FileSnap;
 
 /**
  * Dump a snapshot file to stdout.
+ * 镜像文件dump
  */
 public class SnapshotFormatter {
 
@@ -43,12 +44,14 @@ public class SnapshotFormatter {
      * USAGE: SnapshotFormatter snapshot_file
      */
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println("USAGE: SnapshotFormatter snapshot_file");
-            System.exit(2);
-        }
-
-        new SnapshotFormatter().run(args[0]);
+//        if (args.length != 1) {
+//            System.err.println("USAGE: SnapshotFormatter snapshot_file");
+//            System.exit(2);
+//        }
+        //String filePath="/home/xiaoniudu/share-doc2win7/snapshot.5028f386f";
+        String filePath="/tmp/zookeeper1/version-2/snapshot.900000003";
+        new SnapshotFormatter().run(filePath);
+       // new SnapshotFormatter().run(args[0]);
     }
     
     public void run(String snapshotFileName) throws IOException {

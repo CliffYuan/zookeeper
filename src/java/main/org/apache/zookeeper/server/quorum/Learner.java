@@ -131,6 +131,7 @@ public class Learner {
      * @throws IOException
      */
     void writePacket(QuorumPacket pp, boolean flush) throws IOException {
+
         synchronized (leaderOs) {
             if (pp != null) {
                 leaderOs.writeRecord(pp, "packet");
@@ -183,6 +184,7 @@ public class Learner {
             oa.write(b);
         }
         oa.close();
+        LOG.info("转发消息给leader,request:"+request);
         QuorumPacket qp = new QuorumPacket(Leader.REQUEST, -1, baos
                 .toByteArray(), request.authInfo);
         writePacket(qp, true);
@@ -246,7 +248,10 @@ public class Learner {
     
     /**
      * Once connected to the leader, perform the handshake protocol to
-     * establish a following / observing connection. 
+     * establish a following / observing connection.
+     * 连接到leader后，执行握手协议
+     * 1.传递learner的zxid给leader
+     * 2.leader返回zxid给learner
      * @param pktType
      * @return the zxid the Leader sends for synchronization purposes.
      * @throws IOException

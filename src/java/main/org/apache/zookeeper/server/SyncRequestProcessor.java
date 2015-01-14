@@ -231,6 +231,7 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
     }
 
     public void processRequest(Request request) {
+        LOG.info("接收消息，将记录日志,request:{}",request);
         // request.addRQRec(">sync");
         queuedRequests.add(request);
     }

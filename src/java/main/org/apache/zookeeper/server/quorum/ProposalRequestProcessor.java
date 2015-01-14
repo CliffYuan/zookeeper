@@ -69,13 +69,15 @@ public class ProposalRequestProcessor implements RequestProcessor {
          */
         
         if(request instanceof LearnerSyncRequest){
-            zks.getLeader().processSync((LearnerSyncRequest)request);
+            LOG.info("follower同步请求,request:{}",request);
+            zks.getLeader().processSync((LearnerSyncRequest)request);//处理同步请求
         } else {
+            LOG.info("request传递给:{}处理",nextProcessor.getClass().getName());
                 nextProcessor.processRequest(request);
             if (request.hdr != null) {
                 // We need to sync and get consensus on any transactions
                 try {
-                    zks.getLeader().propose(request);
+                    zks.getLeader().propose(request);//
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
                 }

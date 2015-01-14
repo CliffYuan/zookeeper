@@ -1098,12 +1098,14 @@ public class NIOServerCnxn extends ServerCnxn {
     }
 
     /*
+     * 处理watche,通知客户端
      * (non-Javadoc)
      *
      * @see org.apache.zookeeper.server.ServerCnxnIface#process(org.apache.zookeeper.proto.WatcherEvent)
      */
     @Override
     synchronized public void process(WatchedEvent event) {
+        LOG.info("触发watch,event:{}",event);
         ReplyHeader h = new ReplyHeader(-1, -1L, 0);
         if (LOG.isTraceEnabled()) {
             ZooTrace.logTraceMessage(LOG, ZooTrace.EVENT_DELIVERY_TRACE_MASK,

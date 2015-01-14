@@ -291,6 +291,9 @@ public class LearnerHandler extends Thread {
     }
 
     /**
+     * 1.接收learner客户端的第一个包，这个包一定是follower或者observer发的
+     * 2.
+     *
      * This thread will receive packets from the peer and process them and
      * also listen to new connections from new peers.
      */
@@ -389,7 +392,7 @@ public class LearnerHandler extends Thread {
 
                 LinkedList<Proposal> proposals = leader.zk.getZKDatabase().getCommittedLog();
 
-                if (proposals.size() != 0) {
+                if (proposals.size() != 0) {//发送commitlog
                     LOG.debug("proposal size is {}", proposals.size());
                     if ((maxCommittedLog >= peerLastZxid)
                             && (minCommittedLog <= peerLastZxid)) {
@@ -560,6 +563,28 @@ public class LearnerHandler extends Thread {
                 int cxid;
                 int type;
 
+
+                /**
+                 * 注意：从follower转发过来的请求没有zxid.
+                 *
+                 *
+                 * 下面重点来看下LearnerHandler线程。这个线程处理所有Learner（包括Follower和Observer）的交互逻辑。
+                 * 从Learner发来的消息有以下几种：
+
+                 1. ACK消息。这是Follower对PROPOSAL消息的响应。Leader收到这个消息后，判断对应的PROPOSAL如果有过半的voter通过，
+                 则发送commit请求到CommitProcessor线程的CommittedRequest队列，并且发送Commit消息给所有Follower，
+                 发送INFORM消息给所有Observer（告诉这个Proposal通过了）。
+
+                 2. REQUEST消息。这是Follower转发来的写请求，或者同步请求。
+                 转交给PrepRequestProcessor线程处理（放入其submittedRequests队列）
+
+                 3. PING消息。Learner的心跳消息
+
+                 4. REVALIDATE消息。用来延长session有效时间
+                 */
+                if(qp.getType()!=Leader.PING) {
+                    LOG.info("接收follower端的数据包(过滤了PING)，qp.type：{},qb.zxid:{},zxid="+Long.toHexString(zxid)+",peerLastZxid="+Long.toHexString(peerLastZxid)+",leaderLastZxid="+Long.toHexString(leaderLastZxid)+",zxidToSend="+Long.toHexString(zxidToSend), Leader.getPacketType(qp.getType()),Long.toHexString(qp.getZxid()));
+                }
                 switch (qp.getType()) {
                 case Leader.ACK:
                     if (this.learnerType == LearnerType.OBSERVER) {
@@ -623,6 +648,7 @@ public class LearnerHandler extends Thread {
                         si = new Request(null, sessionId, cxid, type, bb, qp.getAuthinfo());
                     }
                     si.setOwner(this);
+                    LOG.info("接收到follower转发的请求,丢给PrepRequestProcessor处理,request:{}",si);
                     leader.zk.submitRequest(si);
                     break;
                 default:
