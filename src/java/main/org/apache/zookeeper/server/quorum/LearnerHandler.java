@@ -292,7 +292,16 @@ public class LearnerHandler extends Thread {
 
     /**
      * 1.接收learner客户端的第一个包，这个包一定是follower或者observer发的
-     * 2.
+     *
+     *
+     * leader接收到的来自某个follower封包一定是FOLLOWERINFO,该封包告知了该服务器保存的数据id.之后根据这个数据id与本机保存的数据进行比较:
+     1) 如果数据完全一致,则发送DIFF封包告知follower当前数据就是最新的了.
+     2) 判断这一阶段之内有没有已经被提交的提议值,如果有,那么:
+        a) 如果有部分数据没有同步,那么会发送DIFF封包将有差异的数据同步过去.同时将follower没有的数据逐个发送COMMIT封包给follower要求记录下来.
+        b) 如果follower数据id更大,那么会发送TRUNC封包告知截除多余数据.
+     3) 如果这一阶段内没有提交的提议值,直接发送SNAP封包将快照同步发送给follower.
+     以上消息完毕之后,发送UPTODATE封包告知follower当前数据就是最新的了,再次发送NEWLEADER封包宣称自己是leader,等待follower的响应.
+     *
      *
      * This thread will receive packets from the peer and process them and
      * also listen to new connections from new peers.
@@ -338,7 +347,8 @@ public class LearnerHandler extends Thread {
             }            
             
             long lastAcceptedEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
-            
+            LOG.info("收到follower的zxid:{},lastAcceptedEpoch:{}",ZxidUtils.zxidToString(qp.getZxid()),lastAcceptedEpoch);
+
             long peerLastZxid;
             StateSummary ss = null;
             long zxid = qp.getZxid();
@@ -392,7 +402,7 @@ public class LearnerHandler extends Thread {
 
                 LinkedList<Proposal> proposals = leader.zk.getZKDatabase().getCommittedLog();
 
-                if (proposals.size() != 0) {//发送commitlog
+                if (proposals.size() != 0) {//有commit log
                     LOG.debug("proposal size is {}", proposals.size());
                     if ((maxCommittedLog >= peerLastZxid)
                             && (minCommittedLog <= peerLastZxid)) {
@@ -431,10 +441,10 @@ public class LearnerHandler extends Thread {
                                         updates = zxidToSend;
                                     }
                                 }
-                                queuePacket(propose.packet);
+                                queuePacket(propose.packet);//同步投票,待发送，加入队列
                                 QuorumPacket qcommit = new QuorumPacket(Leader.COMMIT, propose.packet.getZxid(),
                                         null, null);
-                                queuePacket(qcommit);
+                                queuePacket(qcommit);//同步投票commit，待发送，加入队列
                             }
                         }
                     } else if (peerLastZxid > maxCommittedLog) {
@@ -444,7 +454,7 @@ public class LearnerHandler extends Thread {
 
                         packetToSend = Leader.TRUNC;
                         zxidToSend = maxCommittedLog;
-                        updates = zxidToSend;
+                        updates = zxidToSend;//删除多余数据
                     } else {
                         LOG.warn("Unhandled proposal scenario");
                     }
@@ -456,7 +466,7 @@ public class LearnerHandler extends Thread {
                             + "are in sync, zxid=0x{}",
                             Long.toHexString(peerLastZxid));
                     packetToSend = Leader.DIFF;
-                    zxidToSend = peerLastZxid;
+                    zxidToSend = peerLastZxid;//已经同步
                 } else {
                     // just let the state transfer happen
                     LOG.debug("proposals is empty");
@@ -468,6 +478,12 @@ public class LearnerHandler extends Thread {
             } finally {
                 rl.unlock();
             }
+
+            //发送顺序
+            //先发送要进行的操作，DIFF,SNAP,TRUNC
+            //然后才是发送队列的如PROPOSAL,COMMIT
+            //然后是NEWLEADER
+            //然后是UPTODATE
 
              QuorumPacket newLeaderQP = new QuorumPacket(Leader.NEWLEADER,
                     ZxidUtils.makeZxid(newEpoch, 0), null, null);
@@ -491,20 +507,20 @@ public class LearnerHandler extends Thread {
                         + " zxid of leader is 0x"
                         + Long.toHexString(leaderLastZxid)
                         + "sent zxid of db as 0x" 
-                        + Long.toHexString(zxidToSend));
+                        + Long.toHexString(zxidToSend)+"，同步整个镜像文件");
                 // Dump data to peer
                 leader.zk.getZKDatabase().serializeSnapshot(oa);
                 oa.writeString("BenWasHere", "signature");
             }
             bufferedOutput.flush();
-            
+
             // Start sending packets
             new Thread() {
                 public void run() {
                     Thread.currentThread().setName(
                             "Sender-" + sock.getRemoteSocketAddress());
                     try {
-                        sendPackets();
+                        sendPackets();//真正发送在这里
                     } catch (InterruptedException e) {
                         LOG.warn("Unexpected interruption",e);
                     }
@@ -523,7 +539,7 @@ public class LearnerHandler extends Thread {
                 return;
             }
             LOG.info("Received NEWLEADER-ACK message from " + getSid());
-            leader.waitForNewLeaderAck(getSid(), qp.getZxid(), getLearnerType());
+            leader.waitForNewLeaderAck(getSid(), qp.getZxid(), getLearnerType());//登陆同步完成，并且收到确定
 
             syncLimitCheck.start();
             

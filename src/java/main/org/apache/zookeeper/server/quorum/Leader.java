@@ -311,6 +311,7 @@ public class Leader {
                 while (!stop) {
                     try{
                         Socket s = ss.accept();
+                        LOG.info("接收到follower连接请求，启动线程LearnerHandler来处理");
                         // start with the initLimit, once the ack is processed
                         // in LearnerHandler switch to the syncLimit
                         s.setSoTimeout(self.tickTime * self.initLimit);
@@ -371,17 +372,21 @@ public class Leader {
             // Start thread that waits for connection requests from 
             // new followers. ###xiaoniudu LearnerThread Start
             cnxAcceptor = new LearnerCnxAcceptor();
-            cnxAcceptor.start();
+            cnxAcceptor.start();//启动接收连接线程
             
             readyToStart = true;
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
-            
-            zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
+
+
+            zk.setZxid(ZxidUtils.makeZxid(epoch, 0));//设置ZXID,
+            // zxid为一64位数字，高32位为leader信息又称为epoch，每次leader转换时递增；低32位为消息编号，Leader转换时应该从0重新开始编号
             
             synchronized(this){
                 lastProposed = zk.getZxid();
             }
-            
+
+            //leader构建NEWLEADER封包,该封包的数据是当前最大数据的id,广播给所有的follower,
+            //也就是告知follower leader保存的数据id是多少,大家看看是不是需要同步.
             newLeaderProposal.packet = new QuorumPacket(NEWLEADER, zk.getZxid(),
                     null, null);
 
@@ -432,7 +437,7 @@ public class Leader {
             String initialZxid = System.getProperty("zookeeper.testingonly.initialZxid");
             if (initialZxid != null) {
                 long zxid = Long.parseLong(initialZxid);
-                zk.setZxid((zk.getZxid() & 0xffffffff00000000L) | zxid);
+                zk.setZxid((zk.getZxid() & 0xffffffff00000000L) | zxid);//
             }
             
             if (!System.getProperty("zookeeper.leaderServes", "yes").equals("no")) {

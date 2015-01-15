@@ -33,6 +33,7 @@ import org.apache.zookeeper.server.DataTree.ProcessTxnResult;
 import org.apache.zookeeper.server.Request;
 import org.apache.zookeeper.server.ZooTrace;
 import org.apache.zookeeper.server.persistence.TxnLog.TxnIterator;
+import org.apache.zookeeper.server.util.ZxidUtils;
 import org.apache.zookeeper.txn.CreateSessionTxn;
 import org.apache.zookeeper.txn.TxnHeader;
 import org.slf4j.Logger;
@@ -142,7 +143,7 @@ public class FileTxnSnapLog {
                     return dt.lastProcessedZxid;
                 }
                 if (hdr.getZxid() < highestZxid && highestZxid != 0) {
-                    LOG.error("{}(higestZxid) > {}(next log) for type {}",
+                    LOG.error("{}(higestZxid) > {}(next log) for type {},可密等操作的",
                             new Object[] { highestZxid, hdr.getZxid(),
                                     hdr.getType() });
                 } else {
@@ -163,6 +164,7 @@ public class FileTxnSnapLog {
                 itr.close();
             }
         }
+        LOG.info("Snap和Log合并完成，zxid:{},zxid:{}",highestZxid, ZxidUtils.zxidToString(highestZxid));
         return highestZxid;
     }
     

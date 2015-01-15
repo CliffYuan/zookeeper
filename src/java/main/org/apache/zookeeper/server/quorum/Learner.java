@@ -316,6 +316,7 @@ public class Learner {
      * @throws InterruptedException
      */
     protected void syncWithLeader(long newLeaderZxid) throws IOException, InterruptedException{
+        LOG.info("选举后follower同步leader开始");
         QuorumPacket ack = new QuorumPacket(Leader.ACK, 0, null, null);
         QuorumPacket qp = new QuorumPacket();
         long newEpoch = ZxidUtils.getEpochFromZxid(newLeaderZxid);
@@ -324,6 +325,7 @@ public class Learner {
         LinkedList<Long> packetsCommitted = new LinkedList<Long>();
         LinkedList<PacketInFlight> packetsNotCommitted = new LinkedList<PacketInFlight>();
         synchronized (zk) {
+            LOG.info("选举后follower同步leader,follower接收的第1个包，type:{}",Leader.getPacketType(qp.getType()));
             if (qp.getType() == Leader.DIFF) {
                 LOG.info("Getting a diff from the leader 0x" + Long.toHexString(qp.getZxid()));                
             }
@@ -361,7 +363,7 @@ public class Learner {
             zk.createSessionTracker();            
             
             long lastQueued = 0;
-
+            int i=2;
             // in V1.0 we take a snapshot when we get the NEWLEADER message, but in pre V1.0
             // we take the snapshot at the UPDATE, since V1.0 also gets the UPDATE (after the NEWLEADER)
             // we need to make sure that we don't take the snapshot twice.
@@ -370,6 +372,8 @@ public class Learner {
             outerLoop:
             while (self.isRunning()) {
                 readPacket(qp);
+                LOG.info("选举后follower同步leader,follower接收的第{}个包，type:{}",i,Leader.getPacketType(qp.getType()));
+                i++;
                 switch(qp.getType()) {
                 case Leader.PROPOSAL:
                     PacketInFlight pif = new PacketInFlight();
@@ -426,7 +430,8 @@ public class Learner {
                         zk.takeSnapshot();
                         self.setCurrentEpoch(newEpoch);
                     }
-                    self.cnxnFactory.setZooKeeperServer(zk);                
+                    self.cnxnFactory.setZooKeeperServer(zk);
+                    LOG.info("同步完成，跳出接收循环");
                     break outerLoop;
                 case Leader.NEWLEADER: // it will be NEWLEADER in v1.0
                     // Create updatingEpoch file and remove it after current

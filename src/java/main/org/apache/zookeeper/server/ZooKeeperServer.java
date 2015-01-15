@@ -266,10 +266,13 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
          * See ZOOKEEPER-1642 for more detail.
          */
         if(zkDb.isInitialized()){
+            LOG.info("leader设置zxid:{},zxid:{},已经初始化过，获取getDataTreeLastProcessedZxid",zkDb.getDataTreeLastProcessedZxid(),Long.toHexString(zkDb.getDataTreeLastProcessedZxid()));
             setZxid(zkDb.getDataTreeLastProcessedZxid());
         }
         else {
-            setZxid(zkDb.loadDataBase());//执行恢复，并返回最新的事务ID
+            long zxid=zkDb.loadDataBase();
+            LOG.info("leader设置zxid:{},zxid:{},未初始化，从DataTree获取",zxid,Long.toHexString(zxid));
+            setZxid(zxid);//执行恢复，并返回最新的事务ID
         }
         
         // Clean up dead sessions 清理session

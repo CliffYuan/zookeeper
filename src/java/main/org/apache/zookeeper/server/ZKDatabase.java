@@ -34,6 +34,7 @@ import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.InputArchive;
 import org.apache.jute.OutputArchive;
 import org.apache.jute.Record;
+import org.apache.zookeeper.server.util.ZxidUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.KeeperException;
@@ -209,6 +210,7 @@ public class ZKDatabase {
      * @throws IOException
      */
     public long loadDataBase() throws IOException {
+        LOG.info("ZKDatabase初始化开始");
         PlayBackListener listener=new PlayBackListener(){
             public void onTxnLoaded(TxnHeader hdr,Record txn){
                 Request r = new Request(null, 0, hdr.getCxid(),hdr.getType(),
@@ -221,6 +223,7 @@ public class ZKDatabase {
         };
         //load数据
         long zxid = snapLog.restore(dataTree,sessionsWithTimeouts,listener);
+        LOG.info("ZKDatabase初始化结束，zxid:{},zxid:{}",zxid, ZxidUtils.zxidToString(zxid));
         initialized = true;
         return zxid;
     }
@@ -232,6 +235,7 @@ public class ZKDatabase {
      * @param request committed request
      */
     public void addCommittedProposal(Request request) {
+        LOG.info("投票通过后的记录commit log,request:{}",request);
         WriteLock wl = logLock.writeLock();
         try {
             wl.lock();
