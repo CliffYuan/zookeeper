@@ -774,6 +774,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e );                        
                     } finally {
+                        LOG.info("observer,转入Looking状态，将进行选举");
                         observer.shutdown();
                         setObserver(null);
                         setPeerState(ServerState.LOOKING);
@@ -787,6 +788,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e);
                     } finally {
+                        LOG.info("follower,转入Looking状态，将进行选举");
                         follower.shutdown();
                         setFollower(null);
                         setPeerState(ServerState.LOOKING);
@@ -801,6 +803,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e);
                     } finally {
+                        LOG.info("leader,转入Looking状态，将进行选举");
                         if (leader != null) {
                             leader.shutdown("Forcing shutdown");
                             setLeader(null);

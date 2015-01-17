@@ -65,6 +65,10 @@ public class CommitProcessor extends Thread implements RequestProcessor {
 
     volatile boolean finished = false;
 
+    /**
+     * 注意：
+     *  queuedRequests中的request带有客户端ServerCnxn信息，能够确定是否跟客户端返回信息
+     */
     @Override
     public void run() {
         try {

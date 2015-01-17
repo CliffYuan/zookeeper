@@ -184,7 +184,7 @@ public class Learner {
             oa.write(b);
         }
         oa.close();
-        LOG.info("转发消息给leader,request:"+request);
+        LOG.info("转发消息给leader,request:{}",request);
         QuorumPacket qp = new QuorumPacket(Leader.REQUEST, -1, baos
                 .toByteArray(), request.authInfo);
         writePacket(qp, true);
@@ -527,7 +527,12 @@ public class Learner {
                     + " is valid: " + valid);
         }
     }
-        
+
+    /**
+     * 发送活动的session给leader
+     * @param qp
+     * @throws IOException
+     */
     protected void ping(QuorumPacket qp) throws IOException {
         // Send back the ping with our session data
         ByteArrayOutputStream bos = new ByteArrayOutputStream();

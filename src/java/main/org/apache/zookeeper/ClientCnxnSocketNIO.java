@@ -72,7 +72,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
                 throw new EndOfStreamException(
-                        "Unable to read additional data from server sessionid 0x"
+                        "读取到的数据小于0，Unable to read additional data from server sessionid 0x"
                                 + Long.toHexString(sessionId)
                                 + ", likely server has closed socket");
             }
@@ -198,6 +198,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void cleanup() {
+        LOG.info("关闭现有连接,{}",this.getRemoteSocketAddress());
         if (sockKey != null) {
             SocketChannel sock = (SocketChannel) sockKey.channel();
             sockKey.cancel();
@@ -351,6 +352,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
                      ClientCnxn cnxn)
             throws IOException, InterruptedException {
+        LOG.info("查询是否有操作,waitTimeOut:{}",waitTimeOut);
         selector.select(waitTimeOut);//超时时间
         Set<SelectionKey> selected;
         synchronized (this) {
@@ -363,7 +365,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {//如果之前连接没有立马连上，则在这里处理OP_CONNECT事件
-                if (sc.finishConnect()) {
+                if (sc.finishConnect()) {//
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
                 }

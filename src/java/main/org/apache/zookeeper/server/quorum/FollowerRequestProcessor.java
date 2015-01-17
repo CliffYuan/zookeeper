@@ -101,7 +101,7 @@ public class FollowerRequestProcessor extends Thread implements
 
     public void processRequest(Request request) {
         if(request.type!=OpCode.ping) {
-            LOG.info("接收客户端请求,也包括客户端的PING请求（过滤了），request:" + request);
+            LOG.info("接收客户端请求,也包括客户端的PING请求（过滤了）,request:{}," , request);
         }
         if (!finished) {
             queuedRequests.add(request);

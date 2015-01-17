@@ -169,7 +169,7 @@ public class ClientCnxn {
      * connection (client sends session disconnect to server as part of close
      * operation)
      */
-    private volatile boolean closing = false;
+    private volatile boolean closing = false;//关闭连接
     
     /**
      * A set of ZooKeeper hosts this client could connect to.
@@ -618,7 +618,7 @@ public class ClientCnxn {
 
     private void finishPacket(Packet p) {
         if (p.watchRegistration != null) {
-            p.watchRegistration.register(p.replyHeader.getErr());
+            p.watchRegistration.register(p.replyHeader.getErr());//todo 不懂
         }
 
         if (p.cb == null) {
@@ -731,7 +731,7 @@ public class ClientCnxn {
                             Watcher.Event.KeeperState.AuthFailed, null) );            		            		
                 }
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got auth sessionid:0x"
+                    LOG.debug("Got auth response sessionid:0x"
                             + Long.toHexString(sessionId));
                 }
                 return;
@@ -739,7 +739,7 @@ public class ClientCnxn {
             if (replyHdr.getXid() == -1) {
                 // -1 means notification
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got notification sessionid:0x"
+                    LOG.debug("Got notification response sessionid:0x"
                         + Long.toHexString(sessionId));
                 }
                 WatcherEvent event = new WatcherEvent();
@@ -796,6 +796,7 @@ public class ClientCnxn {
                 if (packet.requestHeader.getXid() != replyHdr.getXid()) {
                     packet.replyHeader.setErr(
                             KeeperException.Code.CONNECTIONLOSS.intValue());
+                    LOG.error("客户端响应处理，乱续了，设置连接流失CONNECTIONLOSS--------");
                     throw new IOException("Xid out of order. Got Xid "
                             + replyHdr.getXid() + " with err " +
                             + replyHdr.getErr() +
@@ -817,7 +818,7 @@ public class ClientCnxn {
 
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Reading reply sessionid:0x"
-                            + Long.toHexString(sessionId) + ", packet:: " + packet);
+                            + Long.toHexString(sessionId) + ", packet:: " + packet+",服务端响应包解析完了，将解锁客户端或者添加到事件处理");
                 }
             } finally {
                 finishPacket(packet);
@@ -859,6 +860,7 @@ public class ClientCnxn {
             long sessId = (seenRwServerBefore) ? sessionId : 0;//客户端sessionId默认为0
             ConnectRequest conReq = new ConnectRequest(0, lastZxid,
                     sessionTimeout, sessId, sessionPasswd);//构造连接请求
+            LOG.info("连接已经建立，开始建立session,{}",conReq);
             synchronized (outgoingQueue) {
                 // We add backwards since we are pushing into the front
                 // Only send if there's a pending watch
@@ -933,6 +935,7 @@ public class ClientCnxn {
         private boolean saslLoginFailed = false;
 
         private void startConnect() throws IOException {
+            LOG.info("开始客户端连接-----------------------------------------");
             state = States.CONNECTING;//状态改为CONNETING
 
             InetSocketAddress addr;
@@ -988,10 +991,10 @@ public class ClientCnxn {
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             long lastPingRwServer = System.currentTimeMillis();
-            final int MAX_SEND_PING_INTERVAL = 10000; //10 seconds
+            final int MAX_SEND_PING_INTERVAL = 10000; // ping的最大间隔是10秒
             while (state.isAlive()) {
                 try {
-                    if (!clientCnxnSocket.isConnected()) {//如果还没连上，则启动连接过程，这个方法有歧义，其实现是判断sockkey是否已注册，可能此时连接上server
+                    if (!clientCnxnSocket.isConnected()) {//sockkey是否为null.-----如果还没连上，则启动连接过程，这个方法有歧义，其实现是判断sockkey是否已注册，可能此时连接上server
                         if(!isFirstConnect){
                             try {
                                 Thread.sleep(r.nextInt(1000));
@@ -1000,7 +1003,10 @@ public class ClientCnxn {
                             }
                         }
                         // don't re-establish connection if we are closing
+                        //closing等于true,当客户端自己调用zookeeper.close();
+                        //state.CLOSED有两种情况：（1）当客户端自己调用zookeeper.close();（2）建立连接后，初始化session时服务端返timeout<=0
                         if (closing || !state.isAlive()) {
+                            LOG.info("跳出ClientCnxn.SendThread线程，将结束.....");
                             break;
                         }
                         startConnect();//开始连接
@@ -1038,10 +1044,10 @@ public class ClientCnxn {
                                       Watcher.Event.EventType.None,
                                       authState,null));
                             }
-                        }
-                        to = readTimeout - clientCnxnSocket.getIdleRecv();//下一次select超时时间
+                        }//减去上一次发送心跳的时间
+                        to = readTimeout - clientCnxnSocket.getIdleRecv();//上一次接收数据的时间
                     } else {
-                        to = connectTimeout - clientCnxnSocket.getIdleRecv();//如果没连上，则递减连接超时
+                        to = connectTimeout - clientCnxnSocket.getIdleRecv();//上一次发送数据的时间
                     }
                     
                     if (to <= 0) {//session超时，包括连接超时
@@ -1049,7 +1055,7 @@ public class ClientCnxn {
                                 "Client session timed out, have not heard from server in "
                                         + clientCnxnSocket.getIdleRecv() + "ms"
                                         + " for sessionid 0x"
-                                        + Long.toHexString(sessionId));
+                                        + Long.toHexString(sessionId)+",可能连接建立超时"+connectTimeout+"s，或者"+readTimeout+"s没有收到响应,");
                     }
                     if (state.isConnected()) {
                         //如果send空闲，则发送心跳包
@@ -1082,7 +1088,7 @@ public class ClientCnxn {
                         }
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
-                    //处理IO
+                    //处理IO to:select超时时间
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, ClientCnxn.this);
                 } catch (Throwable e) {
                     if (closing) {
@@ -1096,13 +1102,13 @@ public class ClientCnxn {
                     } else {
                         // this is ugly, you have a better way speak up
                         if (e instanceof SessionExpiredException) {
-                            LOG.info(e.getMessage() + ", closing socket connection");
+                            LOG.info("SessionExpiredException:"+e.getMessage() + ", closing socket connection",e);
                         } else if (e instanceof SessionTimeoutException) {
-                            LOG.info(e.getMessage() + RETRY_CONN_MSG);
+                            LOG.info("SessionTimeoutException:"+e.getMessage() + RETRY_CONN_MSG,e);
                         } else if (e instanceof EndOfStreamException) {
-                            LOG.info(e.getMessage() + RETRY_CONN_MSG);
+                            LOG.info("EndOfStreamException:"+e.getMessage() + RETRY_CONN_MSG,e);
                         } else if (e instanceof RWServerFoundException) {
-                            LOG.info(e.getMessage());
+                            LOG.info("RWServerFoundException:"+e.getMessage(),e);
                         } else {
                             LOG.warn(
                                     "Session 0x"
@@ -1112,7 +1118,8 @@ public class ClientCnxn {
                                             + ", unexpected error"
                                             + RETRY_CONN_MSG, e);
                         }
-                        cleanup();//清理之前的连接，找下一台server连接
+
+                        cleanup();//清理之前的连接，找下一台server连接,设置sockkey=null
                         if (state.isAlive()) {
                             eventThread.queueEvent(new WatchedEvent(
                                     Event.EventType.None,
@@ -1187,6 +1194,7 @@ public class ClientCnxn {
         }
 
         private void cleanup() {
+            LOG.info("开始关闭连接,清理待等待响应，清理待发送信息，事件响应等");
             clientCnxnSocket.cleanup();
             synchronized (pendingQueue) {
                 for (Packet p : pendingQueue) {
@@ -1200,6 +1208,7 @@ public class ClientCnxn {
                 }
                 outgoingQueue.clear();
             }
+            LOG.info("结束关闭连接,清理待等待响应，清理待发送信息，事件响应等");
         }
 
         /**
@@ -1216,6 +1225,7 @@ public class ClientCnxn {
                 byte[] _sessionPasswd, boolean isRO) throws IOException {
             negotiatedSessionTimeout = _negotiatedSessionTimeout;
             if (negotiatedSessionTimeout <= 0) {
+                LOG.info("session已经过期，状态为state:CLOSED,将跳出SendThread线程(while判断为false),_negotiatedSessionTimeout:{},_sessionId:{}",_negotiatedSessionTimeout,_sessionId);
                 state = States.CLOSED;
 
                 eventThread.queueEvent(new WatchedEvent(

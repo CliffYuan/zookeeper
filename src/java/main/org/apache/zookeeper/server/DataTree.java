@@ -51,6 +51,7 @@ import org.apache.zookeeper.common.PathTrie;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.data.StatPersisted;
+import org.apache.zookeeper.server.util.ZxidUtils;
 import org.apache.zookeeper.txn.CheckVersionTxn;
 import org.apache.zookeeper.txn.CreateTxn;
 import org.apache.zookeeper.txn.DeleteTxn;
@@ -539,20 +540,20 @@ public class DataTree {
         int lastSlash = path.lastIndexOf('/');
         String parentName = path.substring(0, lastSlash);
         String childName = path.substring(lastSlash + 1);
-        DataNode node = nodes.get(path);
+        DataNode node = nodes.get(path);//查找该节点
         if (node == null) {
             throw new KeeperException.NoNodeException();
         }
-        nodes.remove(path);
-        DataNode parent = nodes.get(parentName);
+        nodes.remove(path);//删除该节点
+        DataNode parent = nodes.get(parentName);//查找父节点
         if (parent == null) {
             throw new KeeperException.NoNodeException();
         }
         synchronized (parent) {
-            parent.removeChild(childName);
+            parent.removeChild(childName);//删除子节点
             parent.stat.setPzxid(zxid);
             long eowner = node.stat.getEphemeralOwner();
-            if (eowner != 0) {
+            if (eowner != 0) {//从该临时节点集合中删除该节点
                 HashSet<String> nodes = ephemerals.get(eowner);
                 if (nodes != null) {
                     synchronized (nodes) {
@@ -776,7 +777,7 @@ public class DataTree {
     public ProcessTxnResult processTxn(TxnHeader header, Record txn)
     {
         ProcessTxnResult rc = new ProcessTxnResult();
-
+        LOG.info("修改DataTree，操作类型:{},TxnHeader:{},Record:{}",new Object[]{Request.op2String(header.getType()),header,txn});
         try {
             rc.clientId = header.getClientId();
             rc.cxid = header.getCxid();
@@ -887,6 +888,9 @@ public class DataTree {
                         }
                     }
                     break;
+                default:
+                    LOG.info("DataTree没有做任何修改，操作类型:{},TxnHeader:{},Record:{}",new Object[]{Request.op2String(header.getType()),header,txn});
+                    break;
             }
         } catch (KeeperException e) {
             if (LOG.isDebugEnabled()) {
@@ -913,7 +917,8 @@ public class DataTree {
          * with the file.
          */
         if (rc.zxid > lastProcessedZxid) {
-        	lastProcessedZxid = rc.zxid;
+            LOG.info("更新DataTree中的lastProcessedZxid：{} 为zxid:{}", ZxidUtils.zxidToString(lastProcessedZxid),ZxidUtils.zxidToString(rc.zxid));
+            lastProcessedZxid = rc.zxid;
         }
 
         /*

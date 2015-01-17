@@ -362,6 +362,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
     
     void touch(ServerCnxn cnxn) throws MissingSessionException {
+        LOG.info("更新session,cnxn:{}",cnxn);
         if (cnxn == null) {
             return;
         }
@@ -668,7 +669,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             }
         }
         try {
-            touch(si.cnxn);
+            touch(si.cnxn);//todo 测试用
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
                 firstProcessor.processRequest(si);
@@ -681,7 +682,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             }
         } catch (MissingSessionException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Dropping request: " + e.getMessage());
+                LOG.debug("follower session 流失， Dropping request: " + e.getMessage());
             }
         } catch (RequestProcessorException e) {
             LOG.error("Unable to process request:" + e.getMessage(), e);
@@ -862,7 +863,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         long sessionId = connReq.getSessionId();//拿客户端的sessionId
         if (sessionId != 0) {
             long clientSessionId = connReq.getSessionId();
-            LOG.info("Client attempting to renew session 0x"
+            LOG.info("Client attempting to renew 重连 session sessionid: 0x"
                     + Long.toHexString(clientSessionId)
                     + " at " + cnxn.getRemoteSocketAddress());
             serverCnxnFactory.closeSession(sessionId);//todo 没有看懂
@@ -992,13 +993,14 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
     
     public ProcessTxnResult processTxn(TxnHeader hdr, Record txn) {
-        LOG.info("处理ZK内存数据");
+        LOG.info("处理ZK内存数据,TxnHeader:{},Record:{}",hdr,txn);
         ProcessTxnResult rc;
         int opCode = hdr.getType();
         long sessionId = hdr.getClientId();
         rc = getZKDatabase().processTxn(hdr, txn);
         if (opCode == OpCode.createSession) {
             if (txn instanceof CreateSessionTxn) {
+                LOG.info("创建session,将session添加到sessionTracker");
                 CreateSessionTxn cst = (CreateSessionTxn) txn;
                 sessionTracker.addSession(sessionId, cst
                         .getTimeOut());
@@ -1008,6 +1010,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                         + txn.toString());
             }
         } else if (opCode == OpCode.closeSession) {
+            LOG.info("关闭session,将session从sessionTracker移除");
             sessionTracker.removeSession(sessionId);
         }
         return rc;

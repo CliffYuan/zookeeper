@@ -523,7 +523,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
     @SuppressWarnings("unchecked")
     protected void pRequest(Request request) throws RequestProcessorException {
          LOG.info("Prep>>> cxid = " + request.cxid + " type = " +
-         request.type + " id = 0x" + Long.toHexString(request.sessionId)+",带事务的操作将递增zxid,zxid="+zks.getZxid());
+         Request.op2String(request.type) + " id = 0x" + Long.toHexString(request.sessionId)+",带事务的操作将递增zxid,当前zxid="+zks.getZxid());
         request.hdr = null;
         request.txn = null;
         

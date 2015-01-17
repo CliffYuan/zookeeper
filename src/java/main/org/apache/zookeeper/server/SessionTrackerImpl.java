@@ -41,11 +41,11 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
  */
 public class SessionTrackerImpl extends Thread implements SessionTracker {
     private static final Logger LOG = LoggerFactory.getLogger(SessionTrackerImpl.class);
-
+    //session实体
     HashMap<Long, SessionImpl> sessionsById = new HashMap<Long, SessionImpl>();
-
+    //同一个超时时间点的session，给超时线程用，sessionSets这个Map会以过期时间为key，将所有过期时间 相同的session收集为一个集合。
     HashMap<Long, SessionSet> sessionSets = new HashMap<Long, SessionSet>();
-
+    //session超时信息,固定的
     ConcurrentHashMap<Long, Integer> sessionsWithTimeout;
     long nextSessionId = 0;
     long nextExpirationTime;
@@ -62,7 +62,7 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
 
         final long sessionId;
         final int timeout;
-        long tickTime;
+        long tickTime;//过期时间
         boolean isClosing;
 
         Object owner;
@@ -99,7 +99,7 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         this.expirationInterval = tickTime;
         this.sessionsWithTimeout = sessionsWithTimeout;
         nextExpirationTime = roundToInterval(System.currentTimeMillis());
-        this.nextSessionId = initializeNextSession(sid);
+        this.nextSessionId = initializeNextSession(sid);//下一个sessionid
         for (Entry<Long, Integer> e : sessionsWithTimeout.entrySet()) {
             addSession(e.getKey(), e.getValue());
         }
@@ -150,6 +150,7 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
                 set = sessionSets.remove(nextExpirationTime);
                 if (set != null) {
                     for (SessionImpl s : set.sessions) {
+                        LOG.info("session已经过期，sessionId:{},超时时间点：{},当前时间:{}",new Object[]{s.sessionId,nextExpirationTime,currentTime});
                         setSessionClosing(s.sessionId);
                         expirer.expire(s);
                     }
@@ -176,7 +177,7 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         }
         long expireTime = roundToInterval(System.currentTimeMillis() + timeout);
         if (s.tickTime >= expireTime) {
-            // Nothing needs to be done
+            // Nothing needs to be done todo 啥意思
             return true;
         }
         SessionSet set = sessionSets.get(s.tickTime);

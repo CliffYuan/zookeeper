@@ -136,11 +136,11 @@ public class Follower extends Learner{
      */
     protected void processPacket(QuorumPacket qp) throws IOException{
         if(qp.getType()!=Leader.PING) {
-            LOG.info("接收到leader的数据包(过滤了PING)，type：{},zxid:{}", qp.getType(),qp.getZxid());
+            LOG.info("接收到leader的数据包(过滤了PING)，type：{},zxid:{},zxid:{}", new Object[]{Leader.getPacketType(qp.getType()),qp.getZxid(),ZxidUtils.zxidToString(qp.getZxid())});
         }
         switch (qp.getType()) {
         case Leader.PING:            
-            ping(qp);            
+            ping(qp);//发送活动的session给leader
             break;
         case Leader.PROPOSAL:            
             TxnHeader hdr = new TxnHeader();

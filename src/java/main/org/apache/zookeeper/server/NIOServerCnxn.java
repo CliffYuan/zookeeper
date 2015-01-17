@@ -160,6 +160,8 @@ public class NIOServerCnxn extends ServerCnxn {
                     packetSent();
                     return;
                 }
+            }else {
+                LOG.info("发送session关闭请求,{}",this.toString());
             }
 
             synchronized(this.factory){
@@ -964,6 +966,8 @@ public class NIOServerCnxn extends ServerCnxn {
     @Override
     public void close() {
         synchronized(factory.cnxns){
+            LOG.info("关闭客户端连接，(跟关闭session是两码事).{}",this.toString());
+
             // if this is not in cnxns then it's already closed
             if (!factory.cnxns.remove(this)) {
                 return;

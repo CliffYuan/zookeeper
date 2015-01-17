@@ -619,7 +619,7 @@ public class LearnerHandler extends Thread {
                     while (dis.available() > 0) {
                         long sess = dis.readLong();
                         int to = dis.readInt();
-                        leader.zk.touch(sess, to);
+                        leader.zk.touch(sess, to);//更新session
                     }
                     break;
                 case Leader.REVALIDATE:

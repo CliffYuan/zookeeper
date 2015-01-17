@@ -122,6 +122,7 @@ public class FinalRequestProcessor implements RequestProcessor {
         }
 
         if (request.hdr != null && request.hdr.getType() == OpCode.closeSession) {
+
             ServerCnxnFactory scxn = zks.getServerCnxnFactory();
             // this might be possible since
             // we might just be playing diffs from the leader
@@ -130,6 +131,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 // close session response being lost - we've already closed
                 // the session/socket here before we can send the closeSession
                 // in the switch block below
+                LOG.info("关闭session,并且将关闭连接,request{}",request);
                 scxn.closeSession(request.sessionId);
                 return;
             }
@@ -179,7 +181,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                         request.createTime, System.currentTimeMillis());
 
                 zks.finishSessionInit(request.cnxn, true);
-                return;
+                return;//返回了
             }
             case OpCode.multi: {
                 lastOp = "MULT";
@@ -374,9 +376,11 @@ public class FinalRequestProcessor implements RequestProcessor {
             // successfully fwd/processed by the leader and as a result
             // the client and leader disagree on where the client is most
             // recently attached (and therefore invalid SESSION MOVED generated)
+            LOG.error("Failed to process " + request, e);
             cnxn.sendCloseSession();
             return;
         } catch (KeeperException e) {
+            LOG.error("Failed to process " + request, e);
             err = e.code();
         } catch (Exception e) {
             // log at error level as we are returning a marshalling
@@ -403,6 +407,7 @@ public class FinalRequestProcessor implements RequestProcessor {
         try {
             cnxn.sendResponse(hdr, rsp, "response");
             if (closeSession) {
+                LOG.info("通知客户端关闭session:{}",request);
                 cnxn.sendCloseSession();
             }
         } catch (IOException e) {
