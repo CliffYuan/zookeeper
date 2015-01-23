@@ -83,9 +83,9 @@ public class DataTree {
     private final ConcurrentHashMap<String, DataNode> nodes =
         new ConcurrentHashMap<String, DataNode>();
 
-    private final WatchManager dataWatches = new WatchManager();
+    private final WatchManager dataWatches = new WatchManager();//创建节点/删除节点
 
-    private final WatchManager childWatches = new WatchManager();
+    private final WatchManager childWatches = new WatchManager();//创建/删除节点的父节点
 
     /** the root of zookeeper tree */
     private static final String rootZookeeper = "/";
@@ -490,7 +490,7 @@ public class DataTree {
             parent.addChild(childName);
             nodes.put(path, child);
             if (ephemeralOwner != 0) {
-                HashSet<String> list = ephemerals.get(ephemeralOwner);
+                HashSet<String> list = ephemerals.get(ephemeralOwner);//ephemeralOwner应该是sessionid
                 if (list == null) {
                     list = new HashSet<String>();
                     ephemerals.put(ephemeralOwner, list);

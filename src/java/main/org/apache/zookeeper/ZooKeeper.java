@@ -128,11 +128,11 @@ public class ZooKeeper {
      * API.
      */
     private static class ZKWatchManager implements ClientWatchManager {
-        private final Map<String, Set<Watcher>> dataWatches =
+        private final Map<String, Set<Watcher>> dataWatches =//节点数据变更
             new HashMap<String, Set<Watcher>>();
-        private final Map<String, Set<Watcher>> existWatches =
+        private final Map<String, Set<Watcher>> existWatches =//节点是否存在
             new HashMap<String, Set<Watcher>>();
-        private final Map<String, Set<Watcher>> childWatches =
+        private final Map<String, Set<Watcher>> childWatches =//子节点数量变化
             new HashMap<String, Set<Watcher>>();
 
         private volatile Watcher defaultWatcher;
@@ -248,7 +248,8 @@ public class ZooKeeper {
          * @param rc the result code of the operation that attempted to
          * add the watch on the path.
          */
-        public void register(int rc) {
+        public void register(int rc) {//rc表示
+            LOG.info("注册watcher类型：rc:{},code:{}",rc,KeeperException.Code.get(rc));;
             if (shouldAddWatch(rc)) {
                 Map<String, Set<Watcher>> watches = getWatches(rc);
                 synchronized(watches) {
@@ -318,7 +319,7 @@ public class ZooKeeper {
         CLOSED, AUTH_FAILED, NOT_CONNECTED;
 
         public boolean isAlive() {
-            return this != CLOSED && this != AUTH_FAILED;
+            return this != CLOSED && this != AUTH_FAILED;//等价于!(this==CLOSED||this==AUTH_FAILED)
         }
 
         /**
@@ -936,7 +937,7 @@ public class ZooKeeper {
         }
 
         List<OpResult> results = response.getResultList();
-        
+
         ErrorResult fatalError = null;
         for (OpResult result : results) {
             if (result instanceof ErrorResult && ((ErrorResult)result).getErr() != KeeperException.Code.OK.intValue()) {
@@ -1558,7 +1559,7 @@ public class ZooKeeper {
      * if no node with the given path exists.
      *
      * @since 3.3.0
-     * 
+     *
      * @param path
      * @param watcher explicit watcher
      * @param stat stat of the znode designated by path
@@ -1614,7 +1615,7 @@ public class ZooKeeper {
      * if no node with the given path exists.
      *
      * @since 3.3.0
-     * 
+     *
      * @param path
      * @param watch
      * @param stat stat of the znode designated by path
@@ -1633,7 +1634,7 @@ public class ZooKeeper {
      * The asynchronous version of getChildren.
      *
      * @since 3.3.0
-     * 
+     *
      * @see #getChildren(String, Watcher, Stat)
      */
     public void getChildren(final String path, Watcher watcher,
@@ -1664,7 +1665,7 @@ public class ZooKeeper {
      * The asynchronous version of getChildren.
      *
      * @since 3.3.0
-     * 
+     *
      * @see #getChildren(String, boolean, Stat)
      */
     public void getChildren(String path, boolean watch, Children2Callback cb,
@@ -1702,10 +1703,10 @@ public class ZooKeeper {
     /**
      * String representation of this ZooKeeper client. Suitable for things
      * like logging.
-     * 
+     *
      * Do NOT count on the format of this string, it may change without
      * warning.
-     * 
+     *
      * @since 3.3.0
      */
     @Override
@@ -1727,9 +1728,9 @@ public class ZooKeeper {
     /**
      * Wait up to wait milliseconds for the underlying threads to shutdown.
      * THIS METHOD IS EXPECTED TO BE USED FOR TESTING ONLY!!!
-     * 
+     *
      * @since 3.3.0
-     * 
+     *
      * @param wait max wait in milliseconds
      * @return true iff all threads are shutdown, otw false
      */
@@ -1751,7 +1752,7 @@ public class ZooKeeper {
      * THIS METHOD IS EXPECTED TO BE USED FOR TESTING ONLY!!!
      *
      * @since 3.3.0
-     * 
+     *
      * @return ip address of the remote side of the connection or null if
      *         not connected
      */
@@ -1759,12 +1760,12 @@ public class ZooKeeper {
         return cnxn.sendThread.getClientCnxnSocket().getRemoteSocketAddress();
     }
 
-    /** 
+    /**
      * Returns the local address to which the socket is bound.
      * THIS METHOD IS EXPECTED TO BE USED FOR TESTING ONLY!!!
      *
      * @since 3.3.0
-     * 
+     *
      * @return ip address of the remote side of the connection or null if
      *         not connected
      */

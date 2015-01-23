@@ -92,7 +92,7 @@ public class Vote {
     
     final private long zxid;
     
-    final private long electionEpoch;
+    final private long electionEpoch;//当前这一轮
     
     final private long peerEpoch;
     

@@ -45,9 +45,9 @@ public class LogFormatter {
      */
     public static void main(String[] args) throws Exception {
         args=new String[1];
-       // args[0]="/home/xiaoniudu/share-doc2win7/log.502f37979";
+        args[0]="/home/xiaoniudu/share-doc2win7/log.9013abef9";
 
-        args[0]="/tmp/zookeeper1/version-2/log.900000001";
+       // args[0]="/tmp/zookeeper1/version-2/log.900000001";
 
         if (args.length != 1) {
             System.err.println("USAGE: LogFormatter log_file");
@@ -92,7 +92,7 @@ public class LogFormatter {
             }
             TxnHeader hdr = new TxnHeader();
             Record txn = SerializeUtils.deserializeTxn(bytes, hdr);
-            System.out.println(DateFormat.getDateTimeInstance(DateFormat.SHORT,
+            String a=DateFormat.getDateTimeInstance(DateFormat.SHORT,
                     DateFormat.LONG).format(new Date(hdr.getTime()))
                     + " session 0x"
                     + Long.toHexString(hdr.getClientId())
@@ -100,7 +100,12 @@ public class LogFormatter {
                     + Long.toHexString(hdr.getCxid())
                     + " zxid 0x"
                     + Long.toHexString(hdr.getZxid())
-                    + " " + TraceFormatter.op2String(hdr.getType()) + " " + txn);
+                    + " " + TraceFormatter.op2String(hdr.getType()) + " " + txn;
+
+            LOG.info(a);
+
+
+
             if (logStream.readByte("EOR") != 'B') {
                 LOG.error("Last transaction was partial.");
                 throw new EOFException("Last transaction was partial.");

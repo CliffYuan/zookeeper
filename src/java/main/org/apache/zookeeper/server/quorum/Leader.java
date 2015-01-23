@@ -314,7 +314,7 @@ public class Leader {
                         LOG.info("接收到follower连接请求，启动线程LearnerHandler来处理");
                         // start with the initLimit, once the ack is processed
                         // in LearnerHandler switch to the syncLimit
-                        s.setSoTimeout(self.tickTime * self.initLimit);
+                        s.setSoTimeout(self.tickTime * self.initLimit);//超时时间，
                         s.setTcpNoDelay(nodelay);
                         LearnerHandler fh = new LearnerHandler(s, Leader.this);
                         fh.start();
@@ -366,7 +366,12 @@ public class Leader {
         try {
             self.tick = 0;
             zk.loadData();
-            
+            LOG.info("同步开始--------------------"
+            +",zkServer.zkid:"+ZxidUtils.zxidToString(zk.getZxid())
+            +",QuorumPeer.CurrentEpoch:"+zk.self.getCurrentEpoch()
+            +",QuorumPeer.AcceptedEpoch:"+zk.self.getAcceptedEpoch()
+            +",DataTree.lastProcessZxid:"+ZxidUtils.zxidToString(zk.getZKDatabase().getDataTreeLastProcessedZxid())
+            );
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from 
@@ -419,6 +424,13 @@ public class Leader {
                 self.tick++;
                 return;
             }
+
+            LOG.info("同步中间--------------------"
+                            +",zkServer.zkid:"+ZxidUtils.zxidToString(zk.getZxid())
+                            +",QuorumPeer.CurrentEpoch:"+zk.self.getCurrentEpoch()
+                            +",QuorumPeer.AcceptedEpoch:"+zk.self.getAcceptedEpoch()
+                            +",DataTree.lastProcessZxid:"+ZxidUtils.zxidToString(zk.getZKDatabase().getDataTreeLastProcessedZxid())
+            );
             
             startZkServer();
             
@@ -453,9 +465,15 @@ public class Leader {
             // We ping twice a tick, so we only update the tick every other
             // iteration
             boolean tickSkip = true;
+            LOG.info("同步结束--------------------"
+                            +",zkServer.zkid:"+ZxidUtils.zxidToString(zk.getZxid())
+                            +",QuorumPeer.CurrentEpoch:"+zk.self.getCurrentEpoch()
+                            +",QuorumPeer.AcceptedEpoch:"+zk.self.getAcceptedEpoch()
+                            +",DataTree.lastProcessZxid:"+ZxidUtils.zxidToString(zk.getZKDatabase().getDataTreeLastProcessedZxid())
+            );
     
             while (true) {
-                Thread.sleep(self.tickTime / 2);
+                Thread.sleep(self.tickTime / 2);//相差syncLimit次，即syncLimit×tickTime都没有收到follower的包
                 if (!tickSkip) {
                     self.tick++;
                 }
@@ -467,15 +485,16 @@ public class Leader {
                 for (LearnerHandler f : getLearners()) {
                     // Synced set is used to check we have a supporting quorum, so only
                     // PARTICIPANT, not OBSERVER, learners should be used  ###xiaoniud Leader ping
-                    if (f.synced() && f.getLearnerType() == LearnerType.PARTICIPANT) {
+                    if (f.synced() && f.getLearnerType() == LearnerType.PARTICIPANT) {//判断接收到的ping
                         syncedSet.add(f.getSid());
                     }
-                    f.ping();
+                    f.ping();//发送ping
                 }
 
               if (!tickSkip && !self.getQuorumVerifier().containsQuorum(syncedSet)) {
                 //if (!tickSkip && syncedCount < self.quorumPeers.size() / 2) {
                     // Lost quorum, shutdown
+                    LOG.error("Leader的QuorumPeer线程发出的ping请求没有超过一半的响应，Leader进入Looking状态，重新选举");
                     shutdown("Not sufficient followers synced, only synced with sids: [ "
                             + getSidSetString(syncedSet) + " ]");
                     // make sure the order is the same!
@@ -950,7 +969,7 @@ public class Leader {
         lastCommitted = zk.getZxid();
         LOG.info("Have quorum of supporters, sids: [ "
                 + getSidSetString(newLeaderProposal.ackSet)
-                + " ]; starting up and setting last processed zxid: 0x{}",
+                + " ]; starting up and setting last processed zxid: 0x{},ZookeeperServer启动",
                 Long.toHexString(zk.getZxid()));
         zk.startup();
         /*

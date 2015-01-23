@@ -405,7 +405,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
     }
     
-    public void startup() {        
+    public void startup() {
+        LOG.info("ZookeeperServer启动，启动(或创建)sessionTracker,组装请求处理链RequestProcessor.");
         if (sessionTracker == null) {
             createSessionTracker();
         }
@@ -579,7 +580,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         if (!checkPasswd(sessionId, passwd)) {
             finishSessionInit(cnxn, false);
         } else {
-            revalidateSession(cnxn, sessionId, sessionTimeout);
+            revalidateSession(cnxn, sessionId, sessionTimeout);//看子类实现
         }
     }
 
@@ -669,7 +670,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             }
         }
         try {
-            touch(si.cnxn);//todo 测试用
+            touch(si.cnxn);//todo 注释时测试用
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
                 firstProcessor.processRequest(si);
@@ -866,7 +867,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             LOG.info("Client attempting to renew 重连 session sessionid: 0x"
                     + Long.toHexString(clientSessionId)
                     + " at " + cnxn.getRemoteSocketAddress());
-            serverCnxnFactory.closeSession(sessionId);//todo 没有看懂
+            serverCnxnFactory.closeSession(sessionId);//应该是清理连接 todo 没有看懂
             cnxn.setSessionId(sessionId);
             reopenSession(cnxn, sessionId, passwd, sessionTimeout);
         } else {
@@ -993,7 +994,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
     
     public ProcessTxnResult processTxn(TxnHeader hdr, Record txn) {
-        LOG.info("处理ZK内存数据,TxnHeader:{},Record:{}",hdr,txn);
+        LOG.info("处理ZK内存数据,TxnHeader:{},Record:{},clentId:{}",new Object[]{hdr,txn,hdr.getClientId()});
         ProcessTxnResult rc;
         int opCode = hdr.getType();
         long sessionId = hdr.getClientId();

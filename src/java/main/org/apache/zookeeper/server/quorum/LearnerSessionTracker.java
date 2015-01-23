@@ -61,7 +61,7 @@ public class LearnerSessionTracker implements SessionTracker {
     }
 
     synchronized public boolean touchSession(long sessionId, int sessionTimeout) {
-       // touchTable.put(sessionId, sessionTimeout);
+        touchTable.put(sessionId, sessionTimeout);
         return true;
     }
 

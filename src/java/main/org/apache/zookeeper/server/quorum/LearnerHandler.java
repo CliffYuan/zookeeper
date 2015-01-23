@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
+import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -206,7 +207,7 @@ public class LearnerHandler extends Thread {
                     traceMask = ZooTrace.SERVER_PING_TRACE_MASK;
                 }
                 if (p.getType() == Leader.PROPOSAL) {
-                    syncLimitCheck.updateProposal(p.getZxid(), System.nanoTime());
+                    syncLimitCheck.updateProposal(p.getZxid(), System.nanoTime());//更新发送时间
                 }
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logQuorumPacket(LOG, traceMask, 'o', p);
@@ -547,6 +548,7 @@ public class LearnerHandler extends Thread {
             sock.setSoTimeout(leader.self.tickTime * leader.self.syncLimit);
 
             /*
+               等待zkserver启动完成
              * Wait until leader starts up
              */
             synchronized(leader.zk){
@@ -571,7 +573,7 @@ public class LearnerHandler extends Thread {
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logQuorumPacket(LOG, traceMask, 'i', qp);
                 }
-                tickOfNextAckDeadline = leader.self.tick + leader.self.syncLimit;
+                tickOfNextAckDeadline = leader.self.tick + leader.self.syncLimit;//选举线程发送一次ping,递增tick
 
 
                 ByteBuffer bb;
@@ -608,7 +610,7 @@ public class LearnerHandler extends Thread {
                             LOG.debug("Received ACK from Observer  " + this.sid);
                         }
                     }
-                    syncLimitCheck.updateAck(qp.getZxid());
+                    syncLimitCheck.updateAck(qp.getZxid());//确认接收时间
                     leader.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress());
                     break;
                 case Leader.PING:
@@ -725,8 +727,13 @@ public class LearnerHandler extends Thread {
             }
             QuorumPacket ping = new QuorumPacket(Leader.PING, id, null, null);
             queuePacket(ping);
+
+            if(new Random(5).nextInt()==3) {
+                LOG.info("发送PING给follower,ip:{},lastProposed:{}",this.getSocket().getRemoteSocketAddress(),id);
+            }
         } else {
-            LOG.warn("Closing connection to peer due to transaction timeout.");
+            LOG.warn("发送PROPOSAL，超过tickTime*syncLimit={}s时间还没有回应，关闭连接。Closing connection to peer due to transaction timeout,follower IP is :{}",
+                    leader.self.tickTime * leader.self.syncLimit,this.getSocket().getRemoteSocketAddress());
             shutdown();
         }
     }

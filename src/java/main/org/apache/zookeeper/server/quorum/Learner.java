@@ -224,7 +224,7 @@ public class Learner {
         sock.setSoTimeout(self.tickTime * self.initLimit);
         for (int tries = 0; tries < 5; tries++) {
             try {
-                sock.connect(addr, self.tickTime * self.syncLimit);
+                sock.connect(addr, self.tickTime * self.syncLimit);//连接超时
                 sock.setTcpNoDelay(nodelay);
                 break;
             } catch (IOException e) {
@@ -235,7 +235,7 @@ public class Learner {
                     LOG.warn("Unexpected exception, tries="+tries+
                             ", connecting to " + addr,e);
                     sock = new Socket();
-                    sock.setSoTimeout(self.tickTime * self.initLimit);
+                    sock.setSoTimeout(self.tickTime * self.initLimit);//读取超时
                 }
             }
             Thread.sleep(1000);
@@ -360,7 +360,7 @@ public class Learner {
 
             }
             zk.getZKDatabase().setlastProcessedZxid(qp.getZxid());
-            zk.createSessionTracker();            
+            zk.createSessionTracker(); //创建sessionTracker
             
             long lastQueued = 0;
             int i=2;
@@ -431,7 +431,7 @@ public class Learner {
                         self.setCurrentEpoch(newEpoch);
                     }
                     self.cnxnFactory.setZooKeeperServer(zk);
-                    LOG.info("同步完成，跳出接收循环");
+                    LOG.info("同步完成，客户端连接工厂设置ZookeeperServer对象，可以接收客户端请求了，跳出");
                     break outerLoop;
                 case Leader.NEWLEADER: // it will be NEWLEADER in v1.0
                     // Create updatingEpoch file and remove it after current
@@ -459,7 +459,7 @@ public class Learner {
         ack.setZxid(ZxidUtils.makeZxid(newEpoch, 0));
         writePacket(ack, true);
         sock.setSoTimeout(self.tickTime * self.syncLimit);
-        zk.startup();
+        zk.startup();//启动zkserver
         /*
          * Update the election vote here to ensure that all members of the
          * ensemble report the same vote to new servers that start up and

@@ -100,7 +100,7 @@ public class QuorumPeerMain {
         if (args.length == 1) {
             config.parse(args[0]);
         }
-
+        //启动定时清理文件任务 purgeInterval》0
         // Start and schedule the the purge task
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(config
                 .getDataDir(), config.getDataLogDir(), config

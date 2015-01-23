@@ -1,0 +1,59 @@
+package com.xiaoniudu.zk;
+
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
+import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 观察者测试
+ * Created by xiaoniudu on 15-1-21.
+ */
+public class ObserverTest {
+
+    @Test
+    public void test_Observer_create() {
+
+        try {
+            String host = "127.0.0.1:2184";
+            ZooKeeper zooKeeper = new ZooKeeper(host, 30000, new Watcher() {
+                @Override
+                public void process(WatchedEvent event) {
+                    System.out.println("========event；" + event);
+                }
+            });
+            Thread.sleep(5000);
+
+            System.out.println("已经建立连接");
+
+            String path = "/mzobserver1";
+            List<ACL> a = new ArrayList<ACL>();
+
+            Id id1 = new Id("digest", DigestAuthenticationProvider.generateDigest("admin:admin123"));
+            ACL acl1 = new ACL(ZooDefs.Perms.ALL, id1);
+            a.add(acl1);
+
+            zooKeeper.create(path, "dd".getBytes(), a, CreateMode.PERSISTENT);
+
+
+            zooKeeper.addAuthInfo("digest", "admin:admin123".getBytes());
+
+            byte[] all = zooKeeper.getData(path, new Watcher() {
+                @Override
+                public void process(WatchedEvent event) {
+                    System.out.printf("====================get event:" + event);
+                }
+            }, null);
+            System.out.printf("get数据:" + all);
+
+            zooKeeper.close();
+        } catch (Exception e) {
+            Assert.fail();
+        }
+    }
+}

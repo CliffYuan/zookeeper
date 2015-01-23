@@ -38,10 +38,10 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 public class WatchManager {
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
 
-    private final HashMap<String, HashSet<Watcher>> watchTable =
+    private final HashMap<String, HashSet<Watcher>> watchTable =//<path,watchers> watchers代表的是客户端集合（有多个客户端对这个事件感兴趣）
         new HashMap<String, HashSet<Watcher>>();
 
-    private final HashMap<Watcher, HashSet<String>> watch2Paths =
+    private final HashMap<Watcher, HashSet<String>> watch2Paths =//<watcher,paths> 主要用于关闭连接操作
         new HashMap<Watcher, HashSet<String>>();
 
     public synchronized int size(){
@@ -93,7 +93,7 @@ public class WatchManager {
     }
 
     public Set<Watcher> triggerWatch(String path, EventType type, Set<Watcher> supress) {
-        LOG.info("触发Watch");
+        LOG.info("触发Watch,path:{},eventType;{}",path,type);
         WatchedEvent e = new WatchedEvent(type,
                 KeeperState.SyncConnected, path);
         HashSet<Watcher> watchers;

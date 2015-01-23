@@ -618,7 +618,7 @@ public class ClientCnxn {
 
     private void finishPacket(Packet p) {
         if (p.watchRegistration != null) {
-            p.watchRegistration.register(p.replyHeader.getErr());//todo 不懂
+            p.watchRegistration.register(p.replyHeader.getErr());//todo
         }
 
         if (p.cb == null) {
@@ -736,7 +736,7 @@ public class ClientCnxn {
                 }
                 return;
             }
-            if (replyHdr.getXid() == -1) {
+            if (replyHdr.getXid() == -1) {//watcher
                 // -1 means notification
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got notification response sessionid:0x"
@@ -821,7 +821,7 @@ public class ClientCnxn {
                             + Long.toHexString(sessionId) + ", packet:: " + packet+",服务端响应包解析完了，将解锁客户端或者添加到事件处理");
                 }
             } finally {
-                finishPacket(packet);
+                finishPacket(packet);//
             }
         }
 
@@ -1004,9 +1004,9 @@ public class ClientCnxn {
                         }
                         // don't re-establish connection if we are closing
                         //closing等于true,当客户端自己调用zookeeper.close();
-                        //state.CLOSED有两种情况：（1）当客户端自己调用zookeeper.close();（2）建立连接后，初始化session时服务端返timeout<=0
+                        //state.CLOSED有两种情况：（1）当客户端自己调用zookeeper.close();（2）建立连接后，初始化session时服务端返timeout<=0(即sessionExprice)
                         if (closing || !state.isAlive()) {
-                            LOG.info("跳出ClientCnxn.SendThread线程，将结束.....");
+                            LOG.info("跳出ClientCnxn.SendThread线程，将结束.....closing:{}，state.isAlive():{}",closing,state.isAlive());
                             break;
                         }
                         startConnect();//开始连接
@@ -1063,6 +1063,7 @@ public class ClientCnxn {
                     	//also make sure not to send too many pings when readTimeout is small 
                         int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() - 
                         		((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
+                        LOG.info("下一次发送ping,timeToNextPing:{},lastSend:{},lastRecv:{}",new Object[]{timeToNextPing,clientCnxnSocket.getIdleSend(),clientCnxnSocket.getIdleRecv()});
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
                         if (timeToNextPing <= 0 || clientCnxnSocket.getIdleSend() > MAX_SEND_PING_INTERVAL) {
                             sendPing();

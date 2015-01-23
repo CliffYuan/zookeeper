@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 public class SyncRequestProcessor extends Thread implements RequestProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(SyncRequestProcessor.class);
     private final ZooKeeperServer zks;
-    private final LinkedBlockingQueue<Request> queuedRequests =
+    private final LinkedBlockingQueue<Request> queuedRequests =//待处理
         new LinkedBlockingQueue<Request>();
     private final RequestProcessor nextProcessor;
 
@@ -163,7 +163,7 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                             }
                             logCount = 0;//刷盘后清空
                         }
-                    } else if (toFlush.isEmpty()) {
+                    } else if (toFlush.isEmpty()) {//查看此时toFlush(响应队列)是否为空，如果为空，说明近一段时间读多写少，直接就响应了
                         // optimization for read heavy workloads
                         // iff this is a read, and there are no pending
                         // flushes (writes), then just pass this to the next

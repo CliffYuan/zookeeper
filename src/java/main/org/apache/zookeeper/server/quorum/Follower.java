@@ -74,6 +74,14 @@ public class Follower extends Learner{
         try {
             InetSocketAddress addr = findLeader(); //查找leader ip
             try {
+                LOG.info("选举后follower同步leader开始，同步开始，开始正常工作---------------"
+                                +"newEpochZxid:0"
+                                +",zkServer.zxid(只对leader有用，选举后重0开始):"+fzk.getZxid()
+                                +",QuorumPeer.CurrentEpoch:"+zk.self.getCurrentEpoch()
+                                +",QuorumPeer.AcceptedEpoch:"+zk.self.getAcceptedEpoch()
+                                +",DataTree.lastProcessZxid:"+ZxidUtils.zxidToString(fzk.getZKDatabase().getDataTreeLastProcessedZxid())
+
+                );
                 connectToLeader(addr);//连接leader
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
 
@@ -86,7 +94,14 @@ public class Follower extends Learner{
                     throw new IOException("Error: Epoch of leader is lower");
                 }
                 syncWithLeader(newEpochZxid);
-                LOG.info("选举后follower同步leader结束，同步结束，开始正常工作---------------");
+                LOG.info("选举后follower同步leader结束，同步结束，开始正常工作---------------"
+                        +"newEpochZxid:"+ZxidUtils.zxidToString(newEpochZxid)
+                        +",zkServer.zxid(只对leader有用，选举后重0开始):"+fzk.getZxid()
+                        +",QuorumPeer.CurrentEpoch:"+zk.self.getCurrentEpoch()
+                        +",QuorumPeer.AcceptedEpoch:"+zk.self.getAcceptedEpoch()
+                        +",DataTree.lastProcessZxid:"+ZxidUtils.zxidToString(fzk.getZKDatabase().getDataTreeLastProcessedZxid())
+
+                );
                 QuorumPacket qp = new QuorumPacket();
                 while (self.isRunning()) {
                     readPacket(qp);

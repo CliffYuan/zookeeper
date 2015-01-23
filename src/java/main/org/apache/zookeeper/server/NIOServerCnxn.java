@@ -236,7 +236,7 @@ public class NIOServerCnxn extends ServerCnxn {
                     boolean isPayload;
                     if (incomingBuffer == lenBuffer) { // start of next request 第一次读，并且知道总长度
                         incomingBuffer.flip();
-                        isPayload = readLength(k);//给incomingBuffer分配一个length长度的内存，将后续的数据都给读进来
+                        isPayload = readLength(k);//给incomingBuffer分配一个length长度的内存，将后续的数据都给读进来，todo 也可能执行监控统计
                         incomingBuffer.clear();
                     } else {
                         // continuation 上一次没有读完（数据包不完整），继续读
@@ -414,6 +414,7 @@ public class NIOServerCnxn extends ServerCnxn {
     }
 
     private void readConnectRequest() throws IOException, InterruptedException {
+        LOG.info("接收创建session请求，{}",zkServer==null?"ZooKeeperServer没有启动，将关闭连接":"ZooKeeperServer已经启动");
         if (zkServer == null) {
             throw new IOException("ZooKeeperServer not running");
         }
@@ -923,7 +924,7 @@ public class NIOServerCnxn extends ServerCnxn {
     private boolean readLength(SelectionKey k) throws IOException {
         // Read the length, now get the buffer
         int len = lenBuffer.getInt();
-        if (!initialized && checkFourLetterWord(sk, len)) {
+        if (!initialized && checkFourLetterWord(sk, len)) {//监控统计
             return false;
         }
         if (len < 0 || len > BinaryInputArchive.maxBuffer) {
@@ -1066,6 +1067,7 @@ public class NIOServerCnxn extends ServerCnxn {
     @Override
     synchronized public void sendResponse(ReplyHeader h, Record r, String tag) {
         try {
+            LOG.info("答复信息给客户端,replyHeader:{},replyBody:{},tag:{}",new Object[]{h,r,tag});
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Make space for length
             BinaryOutputArchive bos = BinaryOutputArchive.getArchive(baos);
@@ -1109,7 +1111,7 @@ public class NIOServerCnxn extends ServerCnxn {
      */
     @Override
     synchronized public void process(WatchedEvent event) {
-        LOG.info("触发watch,event:{}",event);
+        LOG.info("触发watch,将发送给客户端,event:{},clientIp:{}",event,getRemoteSocketAddress());
         ReplyHeader h = new ReplyHeader(-1, -1L, 0);
         if (LOG.isTraceEnabled()) {
             ZooTrace.logTraceMessage(LOG, ZooTrace.EVENT_DELIVERY_TRACE_MASK,

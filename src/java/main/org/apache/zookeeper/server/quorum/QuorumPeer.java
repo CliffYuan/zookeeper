@@ -268,6 +268,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
 
     /**
      * The current tick
+     * 主线程，递增，发送ping
      */
     protected volatile int tick;
 

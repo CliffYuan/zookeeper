@@ -352,7 +352,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
                      ClientCnxn cnxn)
             throws IOException, InterruptedException {
-        LOG.info("查询是否有操作,waitTimeOut:{}",waitTimeOut);
+        LOG.info("查询是否有操作,waitTimeOut(=to):{},lastSend:{},lastRecv:{}",new Object[]{waitTimeOut,getIdleSend(),getIdleRecv()});
         selector.select(waitTimeOut);//超时时间
         Set<SelectionKey> selected;
         synchronized (this) {
