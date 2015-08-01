@@ -33,12 +33,16 @@ import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.InputArchive;
 import org.apache.zookeeper.data.StatPersisted;
 import org.apache.zookeeper.server.persistence.FileSnap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Dump a snapshot file to stdout.
  * 镜像文件dump
  */
 public class SnapshotFormatter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SnapshotFormatter.class);
 
     /**
      * USAGE: SnapshotFormatter snapshot_file
@@ -48,8 +52,33 @@ public class SnapshotFormatter {
 //            System.err.println("USAGE: SnapshotFormatter snapshot_file");
 //            System.exit(2);
 //        }
-        //String filePath="/home/xiaoniudu/share-doc2win7/snapshot.5028f386f";
-        String filePath="/tmp/zookeeper1/version-2/snapshot.900000003";
+      //  String filePath="/home/xiaoniudu/share-doc2win7/zk/snapshot.b04dbc67d";
+        //String filePath="/home/xiaoniudu/share-doc2win7/zk/snapshot.b04daf7cc";
+
+      //  String filePath="/home/xiaoniudu/share-doc2win7/zk/132/snapshot.b04daff15";
+
+    //    String filePath="/home/xiaoniudu/share-doc2win7/zk/132/snapshot.b04dc3f5c";
+
+      //  String filePath="/home/xiaoniudu/share-doc2win7/zk/25/snapshot.b04dc3f5c";
+
+      //  String filePath="/home/xiaoniudu/share-doc2win7/zk/27/snapshot.b04d7502d";
+
+
+     //   String filePath="/home/xiaoniudu/share-doc2win7/zk/321-131/snapshot.b12a48f0e";
+
+        //String filePath="/home/xiaoniudu/share-doc2win7/zk/321-131/snapshot.b12a60cdd";
+
+
+
+      //  String filePath="/home/xiaoniudu/share-doc2win7/20150603/snapshot.1c1e18c165";
+
+
+      //  String filePath="/home/xiaoniudu/share-doc2win7/20150603/snapshot.1c1e19dbc6";
+
+        String filePath="/home/xiaoniudu/share-doc2win7/20150603/snapshot.1c1e1b0bac";
+
+
+        //String filePath="/tmp/zookeeper1/version-2/snapshot.900000003";
         new SnapshotFormatter().run(filePath);
        // new SnapshotFormatter().run(args[0]);
     }
@@ -72,7 +101,7 @@ public class SnapshotFormatter {
 
     private void printDetails(DataTree dataTree, Map<Long, Integer> sessions) {
         printZnodeDetails(dataTree);
-        printSessionDetails(dataTree, sessions);
+     //   printSessionDetails(dataTree, sessions);
     }
 
     private void printZnodeDetails(DataTree dataTree) {
@@ -88,12 +117,16 @@ public class SnapshotFormatter {
         DataNode n = dataTree.getNode(name);
         Set<String> children;
         synchronized(n) { // keep findbugs happy
-            System.out.println(name);
-            printStat(n.stat);
-            if (n.data != null) {
-                System.out.println("  dataLength = " + n.data.length);
-            } else {
-                System.out.println("  no data");
+            if(name.startsWith("/meta")){
+
+            }else {
+                System.out.println(name);
+                printStat(n.stat);
+                if (n.data != null) {
+                    System.out.println("  dataLength = " + n.data.length);
+                } else {
+                    System.out.println("  no data");
+                }
             }
             children = n.getChildren();
         }
@@ -127,5 +160,6 @@ public class SnapshotFormatter {
 
     private void printHex(String prefix, long value) {
         System.out.println(String.format("  %s = %#016x", prefix, value));
+       // LOG.info(String.format("  %s = %#016x", prefix, value));
     }
 }

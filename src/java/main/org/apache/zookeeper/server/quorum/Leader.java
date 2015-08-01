@@ -473,7 +473,7 @@ public class Leader {
             );
     
             while (true) {
-                Thread.sleep(self.tickTime / 2);//相差syncLimit次，即syncLimit×tickTime都没有收到follower的包
+                Thread.sleep(self.tickTime / 2);//睡1秒 ，相差syncLimit次，即syncLimit×tickTime都没有收到follower的包
                 if (!tickSkip) {
                     self.tick++;
                 }
@@ -486,12 +486,12 @@ public class Leader {
                     // Synced set is used to check we have a supporting quorum, so only
                     // PARTICIPANT, not OBSERVER, learners should be used  ###xiaoniud Leader ping
                     if (f.synced() && f.getLearnerType() == LearnerType.PARTICIPANT) {//判断接收到的ping
-                        syncedSet.add(f.getSid());
+                        syncedSet.add(f.getSid());//syncLimit秒内有响应就添加一个（即这个还活着）
                     }
                     f.ping();//发送ping
                 }
 
-              if (!tickSkip && !self.getQuorumVerifier().containsQuorum(syncedSet)) {
+              if (!tickSkip && !self.getQuorumVerifier().containsQuorum(syncedSet)) {//2秒check一次
                 //if (!tickSkip && syncedCount < self.quorumPeers.size() / 2) {
                     // Lost quorum, shutdown
                     LOG.error("Leader的QuorumPeer线程发出的ping请求没有超过一半的响应，Leader进入Looking状态，重新选举");

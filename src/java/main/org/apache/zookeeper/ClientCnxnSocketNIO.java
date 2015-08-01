@@ -82,6 +82,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount++;
                     readLength();//转化为包长度
                 } else if (!initialized) {//开始经建立了连接
+                    LOG.info("读真实数据创建连接");
                     readConnectResult();//读取ConnectRequest，其实就是将incomingBuffer的内容反序列化成ConnectResponse对象,将事件投递给enventThread
                     enableRead();//继续读后续响应
                     if (findSendablePacket(outgoingQueue,
@@ -95,6 +96,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastHeard();
                     initialized = true;//session建立完毕
                 } else {
+                    LOG.info("读真实数据{},开始处理",incomingBuffer.capacity());
                     sendThread.readResponse(incomingBuffer);//已经建立session
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -118,6 +120,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         }
                         p.createBB();//序列化
                     }
+
+                    byte[] all=p.bb.array();
+
+                    LOG.info("-pack-client write data-----"+bytesToHexString(all));
+
                     sock.write(p.bb);//写数据
                     if (!p.bb.hasRemaining()) {//发送成功
                         sentCount++;//已发送的业务Packet数量
@@ -156,6 +163,18 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
+    }
+
+    public static final String bytesToHexString(byte[] bArray) {
+        StringBuffer sb = new StringBuffer(bArray.length);
+        String sTemp;
+        for (int i = 0; i < bArray.length; i++) {
+            sTemp = Integer.toHexString(0xFF & bArray[i]);
+            if (sTemp.length() < 2)
+                sb.append(0);
+            sb.append(sTemp.toUpperCase());
+        }
+        return sb.toString();
     }
 
     private Packet findSendablePacket(LinkedList<Packet> outgoingQueue,
@@ -352,8 +371,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
                      ClientCnxn cnxn)
             throws IOException, InterruptedException {
-        LOG.info("查询是否有操作,waitTimeOut(=to):{},lastSend:{},lastRecv:{}",new Object[]{waitTimeOut,getIdleSend(),getIdleRecv()});
+        long start=System.currentTimeMillis();
+        LOG.info("----------------查询是否有操作,waitTimeOut(=to):{},lastSend:{},lastRecv:{},outgoingQueue:{}",new Object[]{waitTimeOut,getIdleSend(),getIdleRecv(),outgoingQueue.size()});
         selector.select(waitTimeOut);//超时时间
+        LOG.info("----------------wait time:{}",System.currentTimeMillis()-start);
         Set<SelectionKey> selected;
         synchronized (this) {
             selected = selector.selectedKeys();
@@ -370,6 +391,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                LOG.info("有读写事件,waitTimeOut(=to):{},ops:{}",new Object[]{waitTimeOut,k.readyOps()});
                 doIO(pendingQueue, outgoingQueue, cnxn);//处理读写事件
             }
         }
@@ -377,6 +399,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             synchronized(outgoingQueue) {
                 if (findSendablePacket(outgoingQueue,
                         cnxn.sendThread.clientTunneledAuthenticationInProgress()) != null) {
+                    LOG.info("有写事件,enableWrite()");
                     enableWrite();
                 }
             }

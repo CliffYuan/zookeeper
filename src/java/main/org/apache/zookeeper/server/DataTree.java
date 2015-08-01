@@ -83,9 +83,9 @@ public class DataTree {
     private final ConcurrentHashMap<String, DataNode> nodes =
         new ConcurrentHashMap<String, DataNode>();
 
-    private final WatchManager dataWatches = new WatchManager();//创建节点/删除节点
+    private final WatchManager dataWatches = new WatchManager();//创建节点/删除节点 （节点创建删除和watcher数据）
 
-    private final WatchManager childWatches = new WatchManager();//创建/删除节点的父节点
+    private final WatchManager childWatches = new WatchManager();//创建/删除节点的父节点 （子节点）
 
     /** the root of zookeeper tree */
     private static final String rootZookeeper = "/";

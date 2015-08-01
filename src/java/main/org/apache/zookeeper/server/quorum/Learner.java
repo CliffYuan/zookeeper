@@ -552,6 +552,7 @@ public class Learner {
      * Shutdown the Peer
      */
     public void shutdown() {
+        LOG.info("开始关闭所有客户端连接。。。。。置空所关联的zookeeperServer");
         // set the zookeeper server to null
         self.cnxnFactory.setZooKeeperServer(null);
         // clear all the connections

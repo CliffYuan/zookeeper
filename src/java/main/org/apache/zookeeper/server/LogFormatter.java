@@ -30,6 +30,7 @@ import java.util.zip.Checksum;
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.InputArchive;
 import org.apache.jute.Record;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.server.persistence.FileHeader;
@@ -40,12 +41,32 @@ import org.apache.zookeeper.txn.TxnHeader;
 public class LogFormatter {
     private static final Logger LOG = LoggerFactory.getLogger(LogFormatter.class);
 
+
+
     /**
      * @param args
      */
     public static void main(String[] args) throws Exception {
+
+
         args=new String[1];
-        args[0]="/home/xiaoniudu/share-doc2win7/log.9013abef9";
+       // args[0]="/home/xiaoniudu/share-doc2win7/zk/log.b04daf7d0";
+
+       // args[0]="/home/xiaoniudu/share-doc2win7/zk/321-131/log.b12a3bdb9";
+
+     //   args[0]="/home/xiaoniudu/share-doc2win7/zk/321-131/log.b12a48f10";
+
+     //   args[0]="/home/xiaoniudu/share-doc2win7/zk/321-132/log.b12a57600";
+
+        args[0]="/home/xiaoniudu/share-doc2win7/zk/321-133/log.b12a52c3b";
+
+
+
+
+
+
+       // args[0]="/home/xiaoniudu/share-doc2win7/log.b00466e26";
+
 
        // args[0]="/tmp/zookeeper1/version-2/log.900000001";
 

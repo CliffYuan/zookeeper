@@ -884,7 +884,22 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         return false; 
     }
 
+    public static final String bytesToHexString(byte[] bArray) {
+        StringBuffer sb = new StringBuffer(bArray.length);
+        String sTemp;
+        for (int i = 0; i < bArray.length; i++) {
+            sTemp = Integer.toHexString(0xFF & bArray[i]);
+            if (sTemp.length() < 2)
+                sb.append(0);
+            sb.append(sTemp.toUpperCase());
+        }
+        return sb.toString();
+    }
+
     public void processPacket(ServerCnxn cnxn, ByteBuffer incomingBuffer) throws IOException {
+
+        LOG.info("packet server----read:"+bytesToHexString(incomingBuffer.array()));
+
         // We have the request, now process and setup for next
         InputStream bais = new ByteBufferInputStream(incomingBuffer);
         BinaryInputArchive bia = BinaryInputArchive.getArchive(bais);
@@ -893,6 +908,9 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // Through the magic of byte buffers, txn will not be
         // pointing
         // to the start of the txn
+
+
+
         incomingBuffer = incomingBuffer.slice();
         if (h.getType() == OpCode.auth) {
             LOG.info("got auth packet " + cnxn.getRemoteSocketAddress());
@@ -945,6 +963,9 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 Request si = new Request(cnxn, cnxn.getSessionId(), h.getXid(),
                   h.getType(), incomingBuffer, cnxn.getAuthInfo());
                 si.setOwner(ServerCnxn.me);
+
+                LOG.info("packet server----read,type:"+h.getType());
+
                 submitRequest(si);
             }
         }

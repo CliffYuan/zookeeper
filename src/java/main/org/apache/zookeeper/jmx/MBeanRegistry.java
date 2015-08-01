@@ -93,6 +93,7 @@ public class MBeanRegistry {
             return;
         ObjectName oname = makeObjectName(path, bean);
         try {
+            LOG.info("JMX:{},{}",bean,oname.toString());
             mBeanServer.registerMBean(bean, oname);
             mapBean2Path.put(bean, path);
             mapName2Bean.put(bean.getName(), bean);
@@ -205,6 +206,7 @@ public class MBeanRegistry {
         tokenize(beanName,bean.getName(),counter);
         beanName.deleteCharAt(beanName.length()-1);
         try {
+            LOG.info("MXBean:{}",beanName.toString());
             return new ObjectName(beanName.toString());
         } catch (MalformedObjectNameException e) {
             LOG.warn("Invalid name \"" + beanName.toString() + "\" for class "

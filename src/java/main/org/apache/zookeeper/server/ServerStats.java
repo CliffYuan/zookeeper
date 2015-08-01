@@ -103,7 +103,7 @@ public class ServerStats {
     // mutators
     synchronized void updateLatency(long requestCreateTime) {
         long latency = System.currentTimeMillis() - requestCreateTime;
-        totalLatency += latency;
+        totalLatency += latency;//操作延迟，等于从接收请求到处理完成的时间。
         count++;
         if (latency < minLatency) {
             minLatency = latency;

@@ -249,7 +249,7 @@ public class WatcherTest {
 
         System.out.println("aaaaaaaaaaa");
 
-        String path = "/mzexistsgetWatch6";
+        String path = "/mzexistsgetWatch6678";
         List<ACL> a=new ArrayList<ACL>();
 
         Id id1 = new Id("digest", DigestAuthenticationProvider.generateDigest("admin:admin123"));
@@ -276,9 +276,12 @@ public class WatcherTest {
             }
         });
 
+        zooKeeper.create("/linshitest","".getBytes(),ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.EPHEMERAL_SEQUENTIAL);
+
         System.out.printf("stat:" + stat);
 
         System.out.printf("setData----------------------------------");
+        Thread.sleep(500000);
         zooKeeper.close();
 
         Thread.sleep(5000);

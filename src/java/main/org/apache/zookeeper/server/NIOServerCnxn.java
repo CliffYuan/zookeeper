@@ -170,6 +170,14 @@ public class NIOServerCnxn extends ServerCnxn {
                     LOG.trace("Add a buffer to outgoingBuffers, sk " + sk
                             + " is valid: " + sk.isValid());
                 }
+
+                LOG.info("packageaaa:");
+                byte[] all=bb.array();
+                for(byte b:all){
+                    System.out.print(b);
+                }
+                System.out.println("---");
+
                 outgoingBuffers.add(bb);
                 if (sk.isValid()) {
                     sk.interestOps(sk.interestOps() | SelectionKey.OP_WRITE);
@@ -1059,6 +1067,8 @@ public class NIOServerCnxn extends ServerCnxn {
     private final static byte fourBytes[] = new byte[4];
 
     /*
+     4个字节表示数量
+
      * (non-Javadoc)
      *
      * @see org.apache.zookeeper.server.ServerCnxnIface#sendResponse(org.apache.zookeeper.proto.ReplyHeader,
@@ -1083,7 +1093,11 @@ public class NIOServerCnxn extends ServerCnxn {
             }
             byte b[] = baos.toByteArray();
             ByteBuffer bb = ByteBuffer.wrap(b);
+
             bb.putInt(b.length - 4).rewind();
+
+            LOG.info("-pack--server write----"+bytesToHexString(bb.array())+"---type:");
+
             sendBuffer(bb);
             if (h.getXid() > 0) {
                 synchronized(this){
@@ -1101,6 +1115,18 @@ public class NIOServerCnxn extends ServerCnxn {
          } catch(Exception e) {
             LOG.warn("Unexpected exception. Destruction averted.", e);
          }
+    }
+
+    public static final String bytesToHexString(byte[] bArray) {
+        StringBuffer sb = new StringBuffer(bArray.length);
+        String sTemp;
+        for (int i = 0; i < bArray.length; i++) {
+            sTemp = Integer.toHexString(0xFF & bArray[i]);
+            if (sTemp.length() < 2)
+                sb.append(0);
+            sb.append(sTemp.toUpperCase());
+        }
+        return sb.toString();
     }
 
     /*

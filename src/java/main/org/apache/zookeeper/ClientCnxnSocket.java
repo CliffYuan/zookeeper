@@ -112,6 +112,7 @@ abstract class ClientCnxnSocket {
             throw new IOException("Packet len" + len + " is out of range!");
         }
         incomingBuffer = ByteBuffer.allocate(len);
+        LOG.info("读数据长度,length:{}",len);
     }
 
     void readConnectResult() throws IOException {

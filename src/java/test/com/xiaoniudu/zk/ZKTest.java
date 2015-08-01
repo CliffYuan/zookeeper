@@ -8,7 +8,20 @@ import org.apache.zookeeper.*;
 public class ZKTest {
     public static void main(String[] args) throws Exception {
         //create();
-        createEp();
+        //createEp();
+
+       // dbfa0279
+        tt();
+    }
+
+
+
+    private static void tt(){
+        String s = "fffffff8";
+        System.out.println(Long.parseLong(s,16));
+        for (KeeperException.Code c:KeeperException.Code.values()) {
+            System.out.println(c.intValue()+"--"+c.name()+"--" + Integer.toHexString(c.intValue()));
+        }
     }
 
 

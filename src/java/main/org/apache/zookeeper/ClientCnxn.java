@@ -1045,7 +1045,7 @@ public class ClientCnxn {
                                       authState,null));
                             }
                         }//减去上一次发送心跳的时间
-                        to = readTimeout - clientCnxnSocket.getIdleRecv();//上一次接收数据的时间
+                        to = readTimeout - clientCnxnSocket.getIdleRecv();//上一次接收数据的时间     readTimeout = sessionTimeout * 2 / 3;//读超时
                     } else {
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();//上一次发送数据的时间
                     }
@@ -1063,7 +1063,7 @@ public class ClientCnxn {
                     	//also make sure not to send too many pings when readTimeout is small 
                         int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() - 
                         		((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
-                        LOG.info("下一次发送ping,timeToNextPing:{},lastSend:{},lastRecv:{}",new Object[]{timeToNextPing,clientCnxnSocket.getIdleSend(),clientCnxnSocket.getIdleRecv()});
+                        LOG.info("{},下一次发送ping,timeToNextPing:{},lastSend:{},lastRecv:{}",new Object[]{Thread.currentThread(),timeToNextPing,clientCnxnSocket.getIdleSend(),clientCnxnSocket.getIdleRecv()});
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
                         if (timeToNextPing <= 0 || clientCnxnSocket.getIdleSend() > MAX_SEND_PING_INTERVAL) {
                             sendPing();
