@@ -118,7 +118,8 @@ public class ClientCnxn {
     private final CopyOnWriteArraySet<AuthData> authInfo = new CopyOnWriteArraySet<AuthData>();
 
     /**
-     * These are the packets that have been sent and are waiting for a response.
+     * //如果是业务请求，则添加到Pending队列，方便对server端返回做相应处理，如果是其他请求，发完就扔了。。。
+     * These are the packets that have been sent and are waiting for a response. 在发送的时候添加到这个队列
      */
     private final LinkedList<Packet> pendingQueue = new LinkedList<Packet>();
 
@@ -339,7 +340,7 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
+                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
             throws IOException {
         this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher,
              clientCnxnSocket, 0, new byte[16], canBeReadOnly);
@@ -368,8 +369,8 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-            long sessionId, byte[] sessionPasswd, boolean canBeReadOnly) {
+                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
+                      long sessionId, byte[] sessionPasswd, boolean canBeReadOnly) {
         this.zooKeeper = zooKeeper;
         this.watcher = watcher;
         this.sessionId = sessionId;//客户端sessionId
@@ -409,7 +410,7 @@ public class ClientCnxn {
     private Object eventOfDeath = new Object();
 
     private final static UncaughtExceptionHandler uncaughtExceptionHandler = new UncaughtExceptionHandler() {
-        @Override
+        //@Override
         public void uncaughtException(Thread t, Throwable e) {
             LOG.error("from " + t.getName(), e);
         }
@@ -726,9 +727,9 @@ public class ClientCnxn {
             if (replyHdr.getXid() == -4) {
                 // -4 is the xid for AuthPacket               
                 if(replyHdr.getErr() == KeeperException.Code.AUTHFAILED.intValue()) {
-                    state = States.AUTH_FAILED;                    
-                    eventThread.queueEvent( new WatchedEvent(Watcher.Event.EventType.None, 
-                            Watcher.Event.KeeperState.AuthFailed, null) );            		            		
+                    state = States.AUTH_FAILED;
+                    eventThread.queueEvent( new WatchedEvent(Watcher.Event.EventType.None,
+                            Watcher.Event.KeeperState.AuthFailed, null) );
                 }
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got auth response sessionid:0x"
@@ -821,7 +822,7 @@ public class ClientCnxn {
                             + Long.toHexString(sessionId) + ", packet:: " + packet+",服务端响应包解析完了，将解锁客户端或者添加到事件处理");
                 }
             } finally {
-                finishPacket(packet);//
+                finishPacket(packet);//注册watcher。
             }
         }
 
@@ -839,7 +840,7 @@ public class ClientCnxn {
         // Runnable
         /**
          * Used by ClientCnxnSocket
-         * 
+         *
          * @return
          */
         ZooKeeper.States getZkState() {
@@ -880,7 +881,7 @@ public class ClientCnxn {
                         h.setType(ZooDefs.OpCode.setWatches);
                         h.setXid(-8);
                         Packet packet = new Packet(h, new ReplyHeader(), sw, null, null);
-                        outgoingQueue.addFirst(packet);
+                        outgoingQueue.addFirst(packet);//todo 把watcher打包发送给服务端 对重连后获取断连接期间的事件
                     }
                 }
 
@@ -983,7 +984,7 @@ public class ClientCnxn {
 
         private static final String RETRY_CONN_MSG =
             ", closing socket connection and attempting reconnect";
-        
+
         @Override
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
@@ -1049,7 +1050,7 @@ public class ClientCnxn {
                     } else {
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();//上一次发送数据的时间
                     }
-                    
+
                     if (to <= 0) {//session超时，包括连接超时
                         throw new SessionTimeoutException(
                                 "Client session timed out, have not heard from server in "
@@ -1060,8 +1061,8 @@ public class ClientCnxn {
                     if (state.isConnected()) {
                         //如果send空闲，则发送心跳包
                     	//1000(1 second) is to prevent race condition missing to send the second ping
-                    	//also make sure not to send too many pings when readTimeout is small 
-                        int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() - 
+                    	//also make sure not to send too many pings when readTimeout is small
+                        int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() -
                         		((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
                         LOG.info("{},下一次发送ping,timeToNextPing:{},lastSend:{},lastRecv:{}",new Object[]{Thread.currentThread(),timeToNextPing,clientCnxnSocket.getIdleSend(),clientCnxnSocket.getIdleRecv()});
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
@@ -1215,7 +1216,7 @@ public class ClientCnxn {
         /**
          * Callback invoked by the ClientCnxnSocket once a connection has been
          * established.
-         * 
+         *
          * @param _negotiatedSessionTimeout
          * @param _sessionId
          * @param _sessionPasswd
@@ -1348,7 +1349,7 @@ public class ClientCnxn {
     }
 
     public ReplyHeader submitRequest(RequestHeader h, Record request,
-            Record response, WatchRegistration watchRegistration)
+                                     Record response, WatchRegistration watchRegistration)
             throws InterruptedException {
         ReplyHeader r = new ReplyHeader();
         Packet packet = queuePacket(h, r, request, response, null, null, null,
@@ -1383,8 +1384,8 @@ public class ClientCnxn {
     }
 
     Packet queuePacket(RequestHeader h, ReplyHeader r, Record request,
-            Record response, AsyncCallback cb, String clientPath,
-            String serverPath, Object ctx, WatchRegistration watchRegistration)
+                       Record response, AsyncCallback cb, String clientPath,
+                       String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
         Packet packet = null;
 

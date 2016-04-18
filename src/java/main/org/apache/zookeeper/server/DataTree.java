@@ -478,25 +478,25 @@ public class DataTree {
                     throw new KeeperException.NodeExistsException();
                 }
             }
-            
+
             if (parentCVersion == -1) {
                 parentCVersion = parent.stat.getCversion();
                 parentCVersion++;
-            }    
+            }
             parent.stat.setCversion(parentCVersion);
             parent.stat.setPzxid(zxid);
             Long longval = convertAcls(acl);
-            DataNode child = new DataNode(parent, data, longval, stat);
-            parent.addChild(childName);
-            nodes.put(path, child);
+            DataNode child = new DataNode(parent, data, longval, stat);//创建子节点数据
+            parent.addChild(childName);//父节点添加子节点关系
+            nodes.put(path, child);//添加节点
             if (ephemeralOwner != 0) {
                 HashSet<String> list = ephemerals.get(ephemeralOwner);//ephemeralOwner应该是sessionid
                 if (list == null) {
                     list = new HashSet<String>();
-                    ephemerals.put(ephemeralOwner, list);
+                    ephemerals.put(ephemeralOwner, list);//添加该临时节点
                 }
                 synchronized (list) {
-                    list.add(path);
+                    list.add(path);//添加临时节点path
                 }
             }
         }
@@ -544,16 +544,16 @@ public class DataTree {
         if (node == null) {
             throw new KeeperException.NoNodeException();
         }
-        nodes.remove(path);//删除该节点
+        nodes.remove(path);//删除该临时节点
         DataNode parent = nodes.get(parentName);//查找父节点
         if (parent == null) {
             throw new KeeperException.NoNodeException();
         }
         synchronized (parent) {
-            parent.removeChild(childName);//删除子节点
+            parent.removeChild(childName);//从父节点数据中删除子节点
             parent.stat.setPzxid(zxid);
             long eowner = node.stat.getEphemeralOwner();
-            if (eowner != 0) {//从该临时节点集合中删除该节点
+            if (eowner != 0) {//todo 从该临时节点集合中删除该节点
                 HashSet<String> nodes = ephemerals.get(eowner);
                 if (nodes != null) {
                     synchronized (nodes) {
@@ -590,9 +590,9 @@ public class DataTree {
                     "childWatches.triggerWatch " + parentName);
         }
         Set<Watcher> processed = dataWatches.triggerWatch(path,
-                EventType.NodeDeleted);
-        childWatches.triggerWatch(path, EventType.NodeDeleted, processed);
-        childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,
+                EventType.NodeDeleted);//删除节点->触发该path watch data
+        childWatches.triggerWatch(path, EventType.NodeDeleted, processed);//触发节点删除
+        childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,//触发父节点列表变化
                 EventType.NodeChildrenChanged);
     }
 
@@ -743,7 +743,7 @@ public class DataTree {
         public Stat stat;
 
         public List<ProcessTxnResult> multiResult;
-        
+
         /**
          * Equality is defined as the clientId and the cxid being the same. This
          * allows us to use hash tables to track completion of transactions.
@@ -865,9 +865,9 @@ public class DataTree {
                         assert(record != null);
 
                         ByteBufferInputStream.byteBuffer2Record(bb, record);
-                       
+
                         if (failed && subtxn.getType() != OpCode.error){
-                            int ec = post_failed ? Code.RUNTIMEINCONSISTENCY.intValue() 
+                            int ec = post_failed ? Code.RUNTIMEINCONSISTENCY.intValue()
                                                  : Code.OK.intValue();
 
                             subtxn.setType(OpCode.error);
@@ -879,7 +879,7 @@ public class DataTree {
                         }
 
                         TxnHeader subHdr = new TxnHeader(header.getClientId(), header.getCxid(),
-                                                         header.getZxid(), header.getTime(), 
+                                                         header.getZxid(), header.getTime(),
                                                          subtxn.getType());
                         ProcessTxnResult subRc = processTxn(subHdr, record);
                         rc.multiResult.add(subRc);
@@ -917,7 +917,7 @@ public class DataTree {
          * with the file.
          */
         if (rc.zxid > lastProcessedZxid) {
-            LOG.info("更新DataTree中的lastProcessedZxid：{} 为zxid:{}", ZxidUtils.zxidToString(lastProcessedZxid),ZxidUtils.zxidToString(rc.zxid));
+            LOG.info("更新DataTree中的lastProcessedZxid：{} 为zxid:{}", ZxidUtils.zxidToString(lastProcessedZxid), ZxidUtils.zxidToString(rc.zxid));
             lastProcessedZxid = rc.zxid;
         }
 
@@ -957,6 +957,7 @@ public class DataTree {
         return rc;
     }
 
+    //关闭连接
     void killSession(long session, long zxid) {
         // the list is already removed from the ephemerals
         // so we do not have to worry about synchronizing on
@@ -968,7 +969,7 @@ public class DataTree {
         if (list != null) {
             for (String path : list) {
                 try {
-                    deleteNode(path, zxid);
+                    deleteNode(path, zxid);//遍历临时节点
                     if (LOG.isDebugEnabled()) {
                         LOG
                                 .debug("Deleting ephemeral node " + path
@@ -1268,6 +1269,7 @@ public class DataTree {
         }
     }
 
+    //关闭连接,纯粹的删除
     public void removeCnxn(Watcher watcher) {
         dataWatches.removeWatcher(watcher);
         childWatches.removeWatcher(watcher);

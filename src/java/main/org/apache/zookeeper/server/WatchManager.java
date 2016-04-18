@@ -38,9 +38,11 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 public class WatchManager {
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
 
+    //path->watchers 路径和watchers的键值对
     private final HashMap<String, HashSet<Watcher>> watchTable =//<path,watchers> watchers代表的是客户端集合（有多个客户端对这个事件感兴趣）
         new HashMap<String, HashSet<Watcher>>();
 
+    //client->paths 客户端和watch paths的键值对
     private final HashMap<Watcher, HashSet<String>> watch2Paths =//<watcher,paths> 主要用于关闭连接操作
         new HashMap<Watcher, HashSet<String>>();
 
@@ -98,7 +100,7 @@ public class WatchManager {
                 KeeperState.SyncConnected, path);
         HashSet<Watcher> watchers;
         synchronized (this) {
-            watchers = watchTable.remove(path);
+            watchers = watchTable.remove(path);//因为watcher是一次性的
             if (watchers == null || watchers.isEmpty()) {
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logTraceMessage(LOG,
@@ -108,9 +110,9 @@ public class WatchManager {
                 return null;
             }
             for (Watcher w : watchers) {
-                HashSet<String> paths = watch2Paths.get(w);
+                HashSet<String> paths = watch2Paths.get(w);//一个Watcher代表一个客户端(连接)
                 if (paths != null) {
-                    paths.remove(path);
+                    paths.remove(path);//该watcher的删除该path
                 }
             }
         }
@@ -118,7 +120,7 @@ public class WatchManager {
             if (supress != null && supress.contains(w)) {
                 continue;
             }
-            w.process(e);
+            w.process(e);//处理事件
         }
         return watchers;
     }

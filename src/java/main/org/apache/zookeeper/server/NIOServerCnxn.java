@@ -91,7 +91,7 @@ public class NIOServerCnxn extends ServerCnxn {
     int outstandingLimit = 1;
 
     public NIOServerCnxn(ZooKeeperServer zk, SocketChannel sock,
-            SelectionKey sk, NIOServerCnxnFactory factory) throws IOException {
+                         SelectionKey sk, NIOServerCnxnFactory factory) throws IOException {
         this.zkServer = zk;
         this.sock = sock;
         this.sk = sk;
@@ -205,9 +205,9 @@ public class NIOServerCnxn extends ServerCnxn {
             packetReceived();//server的packet统计
             incomingBuffer.flip();//准备使用
             if (!initialized) {//没有初始化，如果CoonectRequst还没来，那第一个packet肯定是他了
-                readConnectRequest();
+                readConnectRequest();//创建会话
             } else {
-                readRequest();
+                readRequest();//处理请求
             }
             lenBuffer.clear();//清理现场，为下一个packet读做准备
             incomingBuffer = lenBuffer;
@@ -991,7 +991,7 @@ public class NIOServerCnxn extends ServerCnxn {
             factory.unregisterConnection(this);
 
             if (zkServer != null) {
-                zkServer.removeCnxn(this);
+                zkServer.removeCnxn(this);//删除连接watcher
             }
     
             closeSock();

@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 public class Vote {
     private static final Logger LOG = LoggerFactory.getLogger(Vote.class);
     
-    public Vote(long id, 
-                    long zxid) {
+    public Vote(long id,
+                long zxid) {
         this.version = 0x0;
         this.id = id;
         this.zxid = zxid;
@@ -36,9 +36,9 @@ public class Vote {
         this.state = ServerState.LOOKING;
     }
     
-    public Vote(long id, 
-                    long zxid, 
-                    long peerEpoch) {
+    public Vote(long id,
+                long zxid,
+                long peerEpoch) {
         this.version = 0x0;
         this.id = id;
         this.zxid = zxid;
@@ -47,10 +47,10 @@ public class Vote {
         this.state = ServerState.LOOKING;
     }
 
-    public Vote(long id, 
-                    long zxid, 
-                    long electionEpoch, 
-                    long peerEpoch) {
+    public Vote(long id,
+                long zxid,
+                long electionEpoch,
+                long peerEpoch) {
         this.version = 0x0;
         this.id = id;
         this.zxid = zxid;
@@ -60,11 +60,11 @@ public class Vote {
     }
     
     public Vote(int version,
-                    long id, 
-                    long zxid, 
-                    long electionEpoch, 
-                    long peerEpoch, 
-                    ServerState state) {
+                long id,
+                long zxid,
+                long electionEpoch,
+                long peerEpoch,
+                ServerState state) {
         this.version = version;
         this.id = id;
         this.zxid = zxid;
@@ -73,11 +73,11 @@ public class Vote {
         this.peerEpoch = peerEpoch;
     }
     
-    public Vote(long id, 
-                    long zxid, 
-                    long electionEpoch, 
-                    long peerEpoch, 
-                    ServerState state) {
+    public Vote(long id,
+                long zxid,
+                long electionEpoch,
+                long peerEpoch,
+                ServerState state) {
         this.id = id;
         this.zxid = zxid;
         this.electionEpoch = electionEpoch;
@@ -88,13 +88,13 @@ public class Vote {
     
     final private int version;
     
-    final private long id;
+    final private long id;//被推举的leader的sid
     
-    final private long zxid;
+    final private long zxid;//被推举的leader的事务id
     
-    final private long electionEpoch;//当前这一轮
+    final private long electionEpoch;//当前这一轮。逻辑时钟，用来判断多个投票是否在同一轮选举周期。进入新一轮都加1。
     
-    final private long peerEpoch;
+    final private long peerEpoch;//被推举的leader的epoch
     
     public int getVersion() {
         return version;
@@ -120,7 +120,7 @@ public class Vote {
         return state;
     }
 
-    final private ServerState state;
+    final private ServerState state;//当前服务器状态
     
     @Override
     public boolean equals(Object o) {

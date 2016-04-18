@@ -99,7 +99,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
     ZooKeeperServer zks;
 
     public PrepRequestProcessor(ZooKeeperServer zks,
-            RequestProcessor nextProcessor) {
+                                RequestProcessor nextProcessor) {
         super("ProcessThread(sid:" + zks.getServerId()
                 + " cport:" + zks.getClientPort() + "):");
         this.nextProcessor = nextProcessor;
@@ -273,7 +273,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
     }
 
     static void checkACL(ZooKeeperServer zks, List<ACL> acl, int perm,
-            List<Id> ids) throws KeeperException.NoAuthException {
+                         List<Id> ids) throws KeeperException.NoAuthException {
         if (skipACL) {
             return;
         }
@@ -325,7 +325,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                                     zks.getTime(), type);
 
         switch (type) {
-            case OpCode.create:                
+            case OpCode.create:
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
                 CreateRequest createRequest = (CreateRequest)record;   
                 if(deserialize)
@@ -424,9 +424,9 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 nodeRecord = getRecordForPath(path);
                 checkACL(zks, nodeRecord.acl, ZooDefs.Perms.WRITE,
                         request.authInfo);
-                version = setDataRequest.getVersion();
+                version = setDataRequest.getVersion();//客户端版本 -1表示不使用乐观锁
                 int currentVersion = nodeRecord.stat.getVersion();
-                if (version != -1 && version != currentVersion) {
+                if (version != -1 && version != currentVersion) {//客户端版本和服务器版本比较
                     throw new KeeperException.BadVersionException(path);
                 }
                 version = currentVersion + 1;

@@ -18,7 +18,15 @@
 
 package org.apache.zookeeper.server;
 
-import java.io.ByteArrayInputStream;
+import org.apache.jute.BinaryInputArchive;
+import org.apache.jute.Record;
+import org.apache.zookeeper.server.persistence.FileHeader;
+import org.apache.zookeeper.server.persistence.FileTxnLog;
+import org.apache.zookeeper.server.util.SerializeUtils;
+import org.apache.zookeeper.txn.TxnHeader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,17 +34,6 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
-
-import org.apache.jute.BinaryInputArchive;
-import org.apache.jute.InputArchive;
-import org.apache.jute.Record;
-import org.apache.zookeeper.KeeperException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.zookeeper.server.persistence.FileHeader;
-import org.apache.zookeeper.server.persistence.FileTxnLog;
-import org.apache.zookeeper.server.util.SerializeUtils;
-import org.apache.zookeeper.txn.TxnHeader;
 
 public class LogFormatter {
     private static final Logger LOG = LoggerFactory.getLogger(LogFormatter.class);
@@ -58,9 +55,9 @@ public class LogFormatter {
 
      //   args[0]="/home/xiaoniudu/share-doc2win7/zk/321-132/log.b12a57600";
 
-        args[0]="/home/xiaoniudu/share-doc2win7/zk/321-133/log.b12a52c3b";
+      //  args[0]="/home/xiaoniudu/share-doc2win7/zk/321-133/log.b12a52c3b";
 
-
+        args[0]="/home/xiaoniudu/share-doc2win7/20150828/log.121233c56";
 
 
 
